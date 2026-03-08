@@ -3,15 +3,21 @@ name: Spring Boot Backend Build and Deploy (GCP Cloud Run)
 on:
   push:
     branches:
-      - develop
-      - test
+      - dev
+      - qa
       - main
     paths:
       - '**'
+  workflow_dispatch:
+
+concurrency:
+  group: backend-deploy-${{ github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -29,21 +35,38 @@ jobs:
 
       - name: Set GCP Environment Variables
         id: set-env
+        shell: bash
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-            echo "ENV_NAME=dev" >> $GITHUB_ENV
-            echo "GCP_PROJECT=your-dev-project-id" >> $GITHUB_ENV
-            echo "GCR_TAG=dev-${{ github.sha }}" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/test" ]]; then
-            echo "ENV_NAME=test" >> $GITHUB_ENV
-            echo "GCP_PROJECT=your-test-project-id" >> $GITHUB_ENV
-            echo "GCR_TAG=test-${{ github.sha }}" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "ENV_NAME=prod" >> $GITHUB_ENV
-            echo "GCP_PROJECT=your-prod-project-id" >> $GITHUB_ENV
-            echo "GCR_TAG=prod-${{ github.sha }}" >> $GITHUB_ENV
-          fi
-          echo "IMAGE_URL=gcr.io/${GCP_PROJECT}/howzy-backend-api:${GCR_TAG}" >> $GITHUB_ENV
+          set -euo pipefail
+
+          BRANCH="${GITHUB_REF_NAME}"
+
+          case "${BRANCH}" in
+            dev)
+              ENV_NAME="dev"
+              GCP_PROJECT="your-dev-project-id"
+              GCR_TAG="dev-${GITHUB_SHA}"
+              ;;
+            qa)
+              ENV_NAME="qa"
+              GCP_PROJECT="your-qa-project-id"
+              GCR_TAG="qa-${GITHUB_SHA}"
+              ;;
+            main)
+              ENV_NAME="prod"
+              GCP_PROJECT="your-prod-project-id"
+              GCR_TAG="prod-${GITHUB_SHA}"
+              ;;
+            *)
+              echo "Unsupported branch for deployment: ${BRANCH}" >&2
+              exit 1
+              ;;
+          esac
+
+          echo "ENV_NAME=${ENV_NAME}" >> "$GITHUB_ENV"
+          echo "GCP_PROJECT=${GCP_PROJECT}" >> "$GITHUB_ENV"
+          echo "GCR_TAG=${GCR_TAG}" >> "$GITHUB_ENV"
+          echo "IMAGE_URL=gcr.io/${GCP_PROJECT}/howzy-backend-api:${GCR_TAG}" >> "$GITHUB_ENV"
 
       - name: Authenticate to Google Cloud
         id: auth
