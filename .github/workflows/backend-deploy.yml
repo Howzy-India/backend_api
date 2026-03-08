@@ -96,7 +96,7 @@ jobs:
         run: gcloud auth configure-docker gcr.io --quiet
 
       - name: Build and Push Docker Image (Jib)
-        run: ./gradlew jib --image=${{ env.IMAGE_URL }}
+        run: ./mvnw clean package jib:build -DsendCredentialsOverHttp=true -Dimage=${{ env.IMAGE_URL }}
 
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v2
