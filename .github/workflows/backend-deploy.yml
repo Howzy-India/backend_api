@@ -31,7 +31,7 @@ jobs:
         with:
           java-version: '23'
           distribution: 'temurin'
-          cache: gradle
+          cache: maven
 
       - name: Set GCP Environment Variables
         id: set-env
