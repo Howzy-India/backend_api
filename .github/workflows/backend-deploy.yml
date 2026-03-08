@@ -44,18 +44,27 @@ jobs:
           case "${BRANCH}" in
             dev)
               ENV_NAME="dev"
-              GCP_PROJECT="your-dev-project-id"
+              GCP_PROJECT="${{ secrets.GCP_DEV_PROJECT_ID }}"
+              GCP_PROJECT_NUMBER="${{ secrets.GCP_DEV_PROJECT_NUMBER }}"
               GCR_TAG="dev-${GITHUB_SHA}"
+              CLOUD_RUN_SERVICE="${{ secrets.GCP_DEV_CLOUD_RUN_SERVICE }}"
+              REGION="${{ secrets.GCP_DEV_REGION }}"
               ;;
             qa)
               ENV_NAME="qa"
-              GCP_PROJECT="your-qa-project-id"
+              GCP_PROJECT="${{ secrets.GCP_QA_PROJECT_ID }}"
+              GCP_PROJECT_NUMBER="${{ secrets.GCP_QA_PROJECT_NUMBER }}"
               GCR_TAG="qa-${GITHUB_SHA}"
+              CLOUD_RUN_SERVICE="${{ secrets.GCP_QA_CLOUD_RUN_SERVICE }}"
+              REGION="${{ secrets.GCP_QA_REGION }}"
               ;;
             main)
               ENV_NAME="prod"
-              GCP_PROJECT="your-prod-project-id"
+              GCP_PROJECT="${{ secrets.GCP_PROD_PROJECT_ID }}"
+              GCP_PROJECT_NUMBER="${{ secrets.GCP_PROD_PROJECT_NUMBER }}"
               GCR_TAG="prod-${GITHUB_SHA}"
+              CLOUD_RUN_SERVICE="${{ secrets.GCP_PROD_CLOUD_RUN_SERVICE }}"
+              REGION="${{ secrets.GCP_PROD_REGION }}"
               ;;
             *)
               echo "Unsupported branch for deployment: ${BRANCH}" >&2
@@ -65,15 +74,18 @@ jobs:
 
           echo "ENV_NAME=${ENV_NAME}" >> "$GITHUB_ENV"
           echo "GCP_PROJECT=${GCP_PROJECT}" >> "$GITHUB_ENV"
+          echo "GCP_PROJECT_NUMBER=${GCP_PROJECT_NUMBER}" >> "$GITHUB_ENV"
           echo "GCR_TAG=${GCR_TAG}" >> "$GITHUB_ENV"
+          echo "CLOUD_RUN_SERVICE=${CLOUD_RUN_SERVICE}" >> "$GITHUB_ENV"
+          echo "REGION=${REGION}" >> "$GITHUB_ENV"
           echo "IMAGE_URL=gcr.io/${GCP_PROJECT}/howzy-backend-api:${GCR_TAG}" >> "$GITHUB_ENV"
 
       - name: Authenticate to Google Cloud
         id: auth
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: 'projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
-          service_account: 'deploy-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com'
+          workload_identity_provider: 'projects/${{ env.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'deploy-sa@${{ env.GCP_PROJECT }}.iam.gserviceaccount.com'
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
@@ -89,8 +101,8 @@ jobs:
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v2
         with:
-          service: howzy-backend-api
+          service: ${{ env.CLOUD_RUN_SERVICE }}
           image: ${{ env.IMAGE_URL }}
-          region: us-central1
+          region: ${{ env.REGION }}
           env_vars: |
             SPRING_PROFILES_ACTIVE=${{ env.ENV_NAME }}
