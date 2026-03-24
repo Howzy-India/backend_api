@@ -1,0 +1,59 @@
+name: Firebase Functions Deploy
+
+on:
+  push:
+    branches:
+      - dev
+      - qa
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: firebase-deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Set Firebase Project
+        id: set-project
+        shell: bash
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+          case "${BRANCH}" in
+            dev)  FIREBASE_PROJECT="${{ secrets.FIREBASE_PROJECT_DEV }}" ;;
+            qa)   FIREBASE_PROJECT="${{ secrets.FIREBASE_PROJECT_QA }}" ;;
+            main) FIREBASE_PROJECT="${{ secrets.FIREBASE_PROJECT_PROD }}" ;;
+            *)
+              echo "Unsupported branch: ${BRANCH}" >&2
+              exit 1
+              ;;
+          esac
+          echo "FIREBASE_PROJECT=${FIREBASE_PROJECT}" >> "$GITHUB_ENV"
+
+      - name: Deploy to Firebase
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only functions --project ${{ env.FIREBASE_PROJECT }}
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
