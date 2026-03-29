@@ -1,6 +1,9 @@
 # Build output — only the root lib/ (compiled JS), not src/lib/
 /lib/
 
+# Test coverage output
+/coverage/
+
 # Dependencies
 node_modules/
 
