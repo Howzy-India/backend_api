@@ -2,7 +2,7 @@ import { onRequest } from "firebase-functions/v2/https";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { randomInt } from "crypto";
+import { randomInt } from "node:crypto";
 import { google } from "googleapis";
 import { collections, FieldValue, db, storage } from "../lib/firestore";
 import {
@@ -116,7 +116,7 @@ app.get("/health", (_req, res) => {
 
 app.get("/projects", async (req, res) => {
   try {
-    const { location, type, minBudget, maxBudget, city, q } = req.query as Record<string, string>;
+    const { location, type, city, q } = req.query as Record<string, string>;
 
     const [projectsSnapshot, submissionsSnapshot] = await Promise.all([
       collections.projects
@@ -341,7 +341,7 @@ app.get("/earnings", ...requireAdmin, async (_req, res) => {
       const ticketValue =
         typeof booking.ticketValue === "number"
           ? booking.ticketValue
-          : Number(String(booking.ticketValue).replace(/[^0-9.-]/g, "")) ||
+          : Number(String(booking.ticketValue).replaceAll(/[^0-9.-]/g, "")) ||
             0;
       return sum + ticketValue;
     }, 0);
@@ -1077,7 +1077,7 @@ const uploadAttendancePhoto = async (
   path: string
 ): Promise<string> => {
   const bucket = storage.bucket();
-  const matches = base64Photo.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+  const matches = /^data:([A-Za-z-+/]+);base64,(.+)$/.exec(base64Photo);
   const mimeType = matches?.[1] ?? "image/jpeg";
   const base64Data = matches?.[2] ?? base64Photo;
   const buffer = Buffer.from(base64Data, "base64");
