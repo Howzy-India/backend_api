@@ -62,6 +62,9 @@ const isPermissionDeniedError = (error: unknown) => {
   );
 };
 
+const isAdminRole = (role?: string) =>
+  role === "admin" || role === "super_admin";
+
 const ensurePropertyExists = async (propertyId?: string | null) => {
   if (!propertyId) return true;
   const [projectDoc, submissionDoc] = await Promise.all([
@@ -449,17 +452,39 @@ app.get("/earnings", ...requireAdmin, async (_req, res) => {
 
 // ── Submissions ──────────────────────────────────────────────────────
 
-app.get("/submissions", ...requireAdmin, async (req, res) => {
+app.get("/submissions", requireAuth, async (req, res) => {
   try {
+    const userRole = req.user?.role;
+    const requesterEmail = req.user?.email?.toLowerCase();
+    const isAdmin = isAdminRole(userRole);
     const email = req.query.email as string | undefined;
+    const normalizedEmail = email?.toLowerCase();
+
+    if (!isAdmin) {
+      if (!requesterEmail) {
+        res.status(400).json({ error: "Email not found in token" });
+        return;
+      }
+      if (normalizedEmail && normalizedEmail !== requesterEmail) {
+        res.status(403).json({ error: "Forbidden: can only access own submissions" });
+        return;
+      }
+    }
+
+    const effectiveEmail = isAdmin ? normalizedEmail : requesterEmail;
     let query: FirebaseFirestore.Query = collections.submissions;
-    if (email) {
-      query = query.where("email", "==", email);
+    if (effectiveEmail) {
+      query = query.where("email", "==", effectiveEmail);
     }
     query = query.orderBy("created_at", "desc");
     const snapshot = await query
       .get()
-      .catch(() => collections.submissions.get());
+      .catch(() => {
+        if (effectiveEmail) {
+          return collections.submissions.where("email", "==", effectiveEmail).get();
+        }
+        return collections.submissions.get();
+      });
     const submissions = snapshot.docs.map(mapSubmissionDoc).map((s) => ({
       ...s,
       date: s.createdAt ? s.createdAt.split("T")[0] : null,
@@ -841,17 +866,34 @@ app.get("/admin/client-360/:email", ...requireAdmin, async (req, res) => {
 
 app.get("/client/enquiries", requireAuth, async (req, res) => {
   try {
-    const email = req.query.email as string;
-    if (!email) {
-      res.status(400).json({ error: "Email is required" });
+    const requesterEmail = req.user?.email?.toLowerCase();
+    const emailParam = (req.query.email as string | undefined)?.toLowerCase();
+    if (!requesterEmail) {
+      res.status(400).json({ error: "Email not found in token" });
       return;
     }
+    if (emailParam && emailParam !== requesterEmail) {
+      res.status(403).json({ error: "Forbidden: can only access own enquiries" });
+      return;
+    }
+    const email = emailParam ?? requesterEmail;
+
     const snapshot = await collections.enquiries
       .where("email", "==", email)
       .where("status", "==", "Approved")
       .orderBy("created_at", "desc")
       .get()
-      .catch(() => collections.enquiries.get());
+      .catch((error) => {
+        if (isPermissionDeniedError(error)) {
+          console.warn("Enquiries read denied for client endpoint. Returning empty list.");
+          return null;
+        }
+        return collections.enquiries.get();
+      });
+    if (!snapshot) {
+      res.json({ enquiries: [] });
+      return;
+    }
     const enquiries = snapshot.docs
       .filter(
         (doc) =>
@@ -892,7 +934,12 @@ app.post("/client/login-track", async (req, res) => {
     });
 
     res.json({ success: true, id: docRef.id });
-  } catch (error) {
+  } catch (error: unknown) {
+    if (isPermissionDeniedError(error)) {
+      console.warn("Client login tracking denied by Firestore permissions. Continuing.");
+      res.json({ success: true, skipped: "permission_denied" });
+      return;
+    }
     console.error("Error tracking login:", error);
     res.status(500).json({ error: "Failed to track login" });
   }
