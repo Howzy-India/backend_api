@@ -135,7 +135,23 @@ app.get("/projects", async (req, res) => {
       collections.projects
         .orderBy("created_at", "desc")
         .get()
-        .catch(() => collections.projects.get()),
+        .catch((error) => {
+          if (isPermissionDeniedError(error)) {
+            console.warn(
+              "Projects read denied while fetching public projects. Returning empty projects list."
+            );
+            return null;
+          }
+          return collections.projects.get().catch((fallbackError) => {
+            if (isPermissionDeniedError(fallbackError)) {
+              console.warn(
+                "Projects read denied while fetching public projects. Returning empty projects list."
+              );
+              return null;
+            }
+            throw fallbackError;
+          });
+        }),
       collections.submissions
         .where("status", "==", "Approved")
         .get()
@@ -150,7 +166,7 @@ app.get("/projects", async (req, res) => {
         }),
     ]);
 
-    const mappedProjects = projectsSnapshot.docs.map(mapProjectDoc);
+    const mappedProjects = projectsSnapshot ? projectsSnapshot.docs.map(mapProjectDoc) : [];
     const mappedSubmissions = submissionsSnapshot
       ? submissionsSnapshot.docs
           .map(mapSubmissionDoc)
@@ -203,9 +219,20 @@ app.get("/projects/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    const projectDoc = await collections.projects.doc(id).get();
+    const projectDoc = await collections.projects
+      .doc(id)
+      .get()
+      .catch((error) => {
+        if (isPermissionDeniedError(error)) {
+          console.warn(
+            "Projects read denied while fetching single public project. Returning not found."
+          );
+          return null;
+        }
+        throw error;
+      });
 
-    if (projectDoc.exists) {
+    if (projectDoc?.exists) {
       return res.json({ project: mapProjectDoc(projectDoc as any) });
     }
 
@@ -243,7 +270,15 @@ app.get("/projects/:id", async (req, res) => {
 app.get("/public/stats", async (_req, res) => {
   try {
     const [projectsSnapshot, submissionsSnapshot] = await Promise.all([
-      collections.projects.get(),
+      collections.projects.get().catch((error) => {
+        if (isPermissionDeniedError(error)) {
+          console.warn(
+            "Projects read denied while fetching public stats. Returning empty stats."
+          );
+          return null;
+        }
+        throw error;
+      }),
       collections.submissions
         .where("status", "==", "Approved")
         .get()
@@ -258,7 +293,7 @@ app.get("/public/stats", async (_req, res) => {
         }),
     ]);
 
-    const projects = projectsSnapshot.docs.map(mapProjectDoc);
+    const projects = projectsSnapshot ? projectsSnapshot.docs.map(mapProjectDoc) : [];
     const submissions = submissionsSnapshot
       ? submissionsSnapshot.docs
           .map(mapSubmissionDoc)
