@@ -108,8 +108,13 @@ const ensureGoogleAuth = (req: express.Request, res: express.Response) => {
 
 // ── Health ────────────────────────────────────────────────────────────
 
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
+app.get("/health", async (_req, res) => {
+  try {
+    await db.collection("__health__").limit(1).get();
+    res.json({ status: "ok", firestore: "connected" });
+  } catch (err: any) {
+    res.status(500).json({ status: "degraded", firestore: "error", detail: err?.message ?? String(err) });
+  }
 });
 
 // ── Projects ─────────────────────────────────────────────────────────
@@ -166,9 +171,9 @@ app.get("/projects", async (req, res) => {
     }
 
     res.json({ projects: combined });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching projects:", error);
-    res.status(500).json({ error: "Failed to fetch projects" });
+    res.status(500).json({ error: "Failed to fetch projects", detail: error?.message ?? String(error) });
   }
 });
 
