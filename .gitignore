@@ -1,5 +1,5 @@
-# Build output
-lib/
+# Build output — only the root lib/ (compiled JS), not src/lib/
+/lib/
 
 # Dependencies
 node_modules/

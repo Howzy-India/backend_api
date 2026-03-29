@@ -305,7 +305,7 @@ app.post("/leads/auto-assign", ...requireAdmin, async (_req, res) => {
     const batch = db.batch();
     let assignedCount = 0;
 
-    unassignedSnapshot.docs.forEach((doc, index) => {
+    unassignedSnapshot.docs.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot, index) => {
       const partner = partners[index % partners.length];
       batch.update(doc.ref, {
         assigned_to: partner.name,
