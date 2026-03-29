@@ -3,15 +3,16 @@
   "private": true,
   "main": "lib/index.js",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
     "lint": "eslint --ext .ts src",
-    "serve": "npm run build && firebase emulators:start --only functions",
+    "serve": "npm run build && firebase emulators:start --only functions,firestore,storage",
     "deploy": "npm run build && firebase deploy --only functions",
-    "deploy:rules": "firebase deploy --only firestore:rules,storage"
+    "deploy:rules": "firebase deploy --only firestore:rules,storage",
+    "deploy:all": "npm run build && firebase deploy --only functions,firestore:rules,storage"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",

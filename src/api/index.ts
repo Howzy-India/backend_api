@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { google } from "googleapis";
-import { collections, FieldValue, db } from "../lib/firestore";
+import { collections, FieldValue, db, storage } from "../lib/firestore";
 import {
   mapProjectDoc,
   mapSubmissionDoc,
@@ -22,9 +22,27 @@ import {
 } from "../lib/helpers";
 import { requireAuth, requireAdmin, requireRole } from "../middleware/auth";
 
+const ALLOWED_ORIGINS = [
+  "https://howzy-web.web.app",
+  "https://howzy-web.firebaseapp.com",
+  // Add custom domain here when configured, e.g. "https://app.howzy.in"
+];
+
 const app = express();
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow server-to-server calls (no origin) and listed origins
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origin ${origin} not allowed`));
+      }
+    },
+    credentials: true,
+  })
+);
+app.use(express.json({ limit: "10mb" })); // 10mb to handle base64 attendance photos
 app.use(cookieParser());
 
 // ── Helpers ───────────────────────────────────────────────────────────
@@ -919,6 +937,340 @@ app.get("/calendar/status", (req, res) => {
   const refreshToken = req.cookies.google_refresh_token;
   res.json({ connected: !!(accessToken || refreshToken) });
 });
+
+// ── Leads (update) ───────────────────────────────────────────────────
+
+app.patch("/leads/:id", requireAuth, requireRole("agent", "admin", "super_admin"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const docRef = collections.leads.doc(id);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      res.status(404).json({ error: "Lead not found" });
+      return;
+    }
+
+    const allowed = [
+      "name", "budget", "location_preferred", "locationPreferred",
+      "looking_bhk", "lookingBhk", "contact", "milestone", "project_id",
+      "document_uploaded", "status", "campaign_source", "campaign_name",
+      "assigned_to", "followUpDate", "followUpNote",
+    ];
+    const updates: Record<string, unknown> = { updated_at: FieldValue.serverTimestamp() };
+    for (const key of allowed) {
+      if (key in req.body) updates[key] = req.body[key];
+    }
+
+    await docRef.update(updates);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error updating lead:", error);
+    res.status(500).json({ error: "Failed to update lead" });
+  }
+});
+
+// ── Partner: own submissions ──────────────────────────────────────────
+
+app.get(
+  "/partner/submissions",
+  requireAuth,
+  requireRole("partner", "admin", "super_admin"),
+  async (req, res) => {
+    try {
+      const email = req.user?.email;
+      if (!email) {
+        res.status(400).json({ error: "Email not found in token" });
+        return;
+      }
+      const snapshot = await collections.submissions
+        .where("email", "==", email)
+        .orderBy("created_at", "desc")
+        .get()
+        .catch(() =>
+          collections.submissions.where("email", "==", email).get()
+        );
+      const submissions = snapshot.docs.map(mapSubmissionDoc).map((s) => ({
+        ...s,
+        date: s.createdAt ? s.createdAt.split("T")[0] : null,
+      }));
+      res.json({ submissions });
+    } catch (error) {
+      console.error("Error fetching partner submissions:", error);
+      res.status(500).json({ error: "Failed to fetch submissions" });
+    }
+  }
+);
+
+// ── Partner: update assigned enquiry status ──────────────────────────
+
+app.patch(
+  "/partner/enquiries/:id/status",
+  requireAuth,
+  requireRole("partner", "admin", "super_admin"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const docRef = collections.enquiries.doc(id);
+      const docSnap = await docRef.get();
+      if (!docSnap.exists) {
+        res.status(404).json({ error: "Enquiry not found" });
+        return;
+      }
+
+      const allowedStatuses = ["In Progress", "Closed", "Assigned"];
+      if (!allowedStatuses.includes(status)) {
+        res.status(400).json({
+          error: `Invalid status. Allowed: ${allowedStatuses.join(", ")}`,
+        });
+        return;
+      }
+
+      await docRef.update({
+        status,
+        updated_at: FieldValue.serverTimestamp(),
+      });
+
+      await addTimelineEntry({
+        enquiryId: id,
+        action: `Status changed to ${status}`,
+        details: `Updated by Partner`,
+        createdBy: req.user?.email ?? "Partner",
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating partner enquiry status:", error);
+      res.status(500).json({ error: "Failed to update enquiry status" });
+    }
+  }
+);
+
+// ── Attendance ───────────────────────────────────────────────────────
+
+const uploadAttendancePhoto = async (
+  base64Photo: string,
+  path: string
+): Promise<string> => {
+  const bucket = storage.bucket();
+  const matches = base64Photo.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+  const mimeType = matches?.[1] ?? "image/jpeg";
+  const base64Data = matches?.[2] ?? base64Photo;
+  const buffer = Buffer.from(base64Data, "base64");
+  const file = bucket.file(path);
+  await file.save(buffer, { metadata: { contentType: mimeType } });
+  await file.makePublic();
+  return `https://storage.googleapis.com/${bucket.name}/${path}`;
+};
+
+app.post(
+  "/attendance/punch-in",
+  requireAuth,
+  requireRole("agent", "partner", "admin", "super_admin"),
+  async (req, res) => {
+    try {
+      const { photo, location, userEmail: bodyEmail } = req.body;
+      const userEmail = bodyEmail ?? req.user?.email ?? "";
+      const today = new Date().toISOString().split("T")[0];
+
+      // Check if already punched in today
+      const existing = await collections.attendance
+        .where("userEmail", "==", userEmail)
+        .where("date", "==", today)
+        .limit(1)
+        .get();
+
+      if (!existing.empty) {
+        res.status(400).json({ error: "Already punched in today" });
+        return;
+      }
+
+      let photoUrl: string | null = null;
+      if (photo) {
+        photoUrl = await uploadAttendancePhoto(
+          photo,
+          `attendance/${userEmail}/${today}/punch-in.jpg`
+        );
+      }
+
+      const docRef = collections.attendance.doc();
+      const record = {
+        id: docRef.id,
+        userEmail,
+        date: today,
+        punchInTime: FieldValue.serverTimestamp(),
+        punchOutTime: null,
+        punchInLocation: location ?? null,
+        punchOutLocation: null,
+        punchInPhoto: photoUrl,
+        punchOutPhoto: null,
+        status: "Working",
+        created_at: FieldValue.serverTimestamp(),
+      };
+      await docRef.set(record);
+      res.json({ success: true, id: docRef.id });
+    } catch (error) {
+      console.error("Error punching in:", error);
+      res.status(500).json({ error: "Failed to punch in" });
+    }
+  }
+);
+
+app.post(
+  "/attendance/punch-out",
+  requireAuth,
+  requireRole("agent", "partner", "admin", "super_admin"),
+  async (req, res) => {
+    try {
+      const { photo, location, userEmail: bodyEmail } = req.body;
+      const userEmail = bodyEmail ?? req.user?.email ?? "";
+      const today = new Date().toISOString().split("T")[0];
+
+      const existing = await collections.attendance
+        .where("userEmail", "==", userEmail)
+        .where("date", "==", today)
+        .where("status", "==", "Working")
+        .limit(1)
+        .get();
+
+      if (existing.empty) {
+        res.status(400).json({ error: "No active punch-in found for today" });
+        return;
+      }
+
+      const docRef = existing.docs[0].ref;
+      let photoUrl: string | null = null;
+      if (photo) {
+        photoUrl = await uploadAttendancePhoto(
+          photo,
+          `attendance/${userEmail}/${today}/punch-out.jpg`
+        );
+      }
+
+      await docRef.update({
+        punchOutTime: FieldValue.serverTimestamp(),
+        punchOutLocation: location ?? null,
+        punchOutPhoto: photoUrl,
+        status: "Completed",
+        updated_at: FieldValue.serverTimestamp(),
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error punching out:", error);
+      res.status(500).json({ error: "Failed to punch out" });
+    }
+  }
+);
+
+app.get(
+  "/attendance",
+  requireAuth,
+  requireRole("agent", "partner", "admin", "super_admin"),
+  async (req, res) => {
+    try {
+      const { email, date } = req.query as Record<string, string>;
+      const userEmail = email ?? req.user?.email ?? "";
+      let query: FirebaseFirestore.Query = collections.attendance.where(
+        "userEmail",
+        "==",
+        userEmail
+      );
+      if (date) {
+        query = query.where("date", "==", date);
+      }
+      const snapshot = await query.limit(1).get();
+      if (snapshot.empty) {
+        res.json({ record: null });
+        return;
+      }
+      const doc = snapshot.docs[0];
+      const data = doc.data();
+      res.json({
+        record: {
+          id: doc.id,
+          userEmail: data.userEmail,
+          date: data.date,
+          punchInTime: toISODate(data.punchInTime),
+          punchOutTime: toISODate(data.punchOutTime),
+          punchInLocation: data.punchInLocation ?? null,
+          punchOutLocation: data.punchOutLocation ?? null,
+          punchInPhoto: data.punchInPhoto ?? null,
+          punchOutPhoto: data.punchOutPhoto ?? null,
+          status: data.status,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching attendance:", error);
+      res.status(500).json({ error: "Failed to fetch attendance" });
+    }
+  }
+);
+
+app.get(
+  "/attendance/history",
+  requireAuth,
+  requireRole("agent", "partner", "admin", "super_admin"),
+  async (req, res) => {
+    try {
+      const email = (req.query.email as string) ?? req.user?.email ?? "";
+      const snapshot = await collections.attendance
+        .where("userEmail", "==", email)
+        .orderBy("date", "desc")
+        .get()
+        .catch(() =>
+          collections.attendance.where("userEmail", "==", email).get()
+        );
+      const records = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          userEmail: data.userEmail,
+          date: data.date,
+          punchInTime: toISODate(data.punchInTime),
+          punchOutTime: toISODate(data.punchOutTime),
+          punchInLocation: data.punchInLocation ?? null,
+          punchOutLocation: data.punchOutLocation ?? null,
+          punchInPhoto: data.punchInPhoto ?? null,
+          punchOutPhoto: data.punchOutPhoto ?? null,
+          status: data.status,
+        };
+      });
+      res.json({ records });
+    } catch (error) {
+      console.error("Error fetching attendance history:", error);
+      res.status(500).json({ error: "Failed to fetch attendance history" });
+    }
+  }
+);
+
+app.post(
+  "/attendance/location",
+  requireAuth,
+  requireRole("agent", "partner", "admin", "super_admin"),
+  async (req, res) => {
+    try {
+      const { lat, lng, userEmail: bodyEmail } = req.body;
+      if (typeof lat !== "number" || typeof lng !== "number") {
+        res.status(400).json({ error: "lat and lng are required numbers" });
+        return;
+      }
+      const userEmail = bodyEmail ?? req.user?.email ?? "";
+      const docRef = collections.locationLogs.doc();
+      await docRef.set({
+        id: docRef.id,
+        userEmail,
+        lat,
+        lng,
+        timestamp: FieldValue.serverTimestamp(),
+      });
+      res.json({ success: true, id: docRef.id });
+    } catch (error) {
+      console.error("Error logging location:", error);
+      res.status(500).json({ error: "Failed to log location" });
+    }
+  }
+);
 
 // ── Export as Cloud Function ─────────────────────────────────────────
 

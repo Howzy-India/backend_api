@@ -6,17 +6,22 @@ node_modules/
 
 # Firebase
 .firebase/
+firebase-debug.log
+firebase-debug.*.log
 
 # IDE
 .idea/
+.vscode/
 
 # System
 .DS_Store
+Thumbs.db
 
-# Environment
+# Environment — never commit real secrets
 .env
 .env.*
 !.env.example
+!.env.production   # template only — real values go in .env.production.local
 
 # Logs
 *.log
@@ -26,4 +31,7 @@ node_modules/
 *.key
 *.p12
 service-account*.json
+*-credentials.json
+google-services.json
+GoogleService-Info.plist
 
