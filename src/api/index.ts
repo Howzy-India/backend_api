@@ -479,12 +479,35 @@ app.get("/submissions", requireAuth, async (req, res) => {
     query = query.orderBy("created_at", "desc");
     const snapshot = await query
       .get()
-      .catch(() => {
-        if (effectiveEmail) {
-          return collections.submissions.where("email", "==", effectiveEmail).get();
+      .catch((error) => {
+        if (isPermissionDeniedError(error)) {
+          console.warn("Submissions read denied. Returning empty submissions list.");
+          return null;
         }
-        return collections.submissions.get();
+        if (effectiveEmail) {
+          return collections.submissions
+            .where("email", "==", effectiveEmail)
+            .get()
+            .catch((fallbackError) => {
+              if (isPermissionDeniedError(fallbackError)) {
+                console.warn("Submissions read denied on fallback. Returning empty submissions list.");
+                return null;
+              }
+              throw fallbackError;
+            });
+        }
+        return collections.submissions.get().catch((fallbackError) => {
+          if (isPermissionDeniedError(fallbackError)) {
+            console.warn("Submissions read denied on fallback. Returning empty submissions list.");
+            return null;
+          }
+          throw fallbackError;
+        });
       });
+    if (!snapshot) {
+      res.json({ submissions: [] });
+      return;
+    }
     const submissions = snapshot.docs.map(mapSubmissionDoc).map((s) => ({
       ...s,
       date: s.createdAt ? s.createdAt.split("T")[0] : null,
