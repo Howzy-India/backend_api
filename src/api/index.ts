@@ -29,6 +29,10 @@ const ALLOWED_ORIGINS = [
 ];
 
 const app = express();
+
+// Handle preflight OPTIONS for all routes before any auth middleware
+app.options("*", cors({ origin: ALLOWED_ORIGINS, credentials: true }));
+
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -40,6 +44,8 @@ app.use(
       }
     },
     credentials: true,
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-bootstrap-key"],
   })
 );
 app.use(express.json({ limit: "10mb" })); // 10mb to handle base64 attendance photos
@@ -448,6 +454,23 @@ app.patch("/submissions/:id/status", ...requireAdmin, async (req, res) => {
 });
 
 // ── Enquiries ────────────────────────────────────────────────────────
+
+app.patch("/submissions/:id", ...requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const docRef = collections.submissions.doc(id);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      res.status(404).json({ error: "Submission not found" });
+      return;
+    }
+    await docRef.update({ ...req.body, updated_at: FieldValue.serverTimestamp() });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error updating submission details:", error);
+    res.status(500).json({ error: "Failed to update submission" });
+  }
+});
 
 app.get("/enquiries", ...requireAdmin, async (_req, res) => {
   try {
