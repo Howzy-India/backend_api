@@ -1,0 +1,46 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ── Attendance Photos ────────────────────────────────────────────
+    // Path: attendance/{userEmail}/{date}/punch-in.jpg|punch-out.jpg
+    match /attendance/{userEmail}/{date}/{fileName} {
+      // Owner can upload their own attendance photos
+      allow write: if request.auth != null
+        && request.auth.token.email == userEmail
+        && (request.auth.token.role == 'agent'
+            || request.auth.token.role == 'partner'
+            || request.auth.token.role == 'admin'
+            || request.auth.token.role == 'super_admin');
+
+      // Owner and admins can read
+      allow read: if request.auth != null
+        && (request.auth.token.email == userEmail
+            || request.auth.token.role == 'admin'
+            || request.auth.token.role == 'super_admin');
+    }
+
+    // ── Property Media ───────────────────────────────────────────────
+    // Path: properties/{propertyId}/{fileName}
+    match /properties/{propertyId}/{fileName} {
+      allow read: if true; // Public read for property images
+      allow write: if request.auth != null
+        && (request.auth.token.role == 'admin'
+            || request.auth.token.role == 'super_admin'
+            || request.auth.token.role == 'partner');
+    }
+
+    // ── Submission Documents ─────────────────────────────────────────
+    // Path: submissions/{submissionId}/{fileName}
+    match /submissions/{submissionId}/{fileName} {
+      allow read: if request.auth != null
+        && (request.auth.token.role == 'admin'
+            || request.auth.token.role == 'super_admin'
+            || request.auth.token.role == 'partner');
+      allow write: if request.auth != null
+        && (request.auth.token.role == 'partner'
+            || request.auth.token.role == 'admin'
+            || request.auth.token.role == 'super_admin');
+    }
+  }
+}
