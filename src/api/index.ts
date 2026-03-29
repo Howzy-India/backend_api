@@ -1303,4 +1303,4 @@ app.post(
 
 // ── Export as Cloud Function ─────────────────────────────────────────
 
-export const api = onRequest(app);
+export const api = onRequest({ serviceAccount: "howzy-api@appspot.gserviceaccount.com" }, app);
