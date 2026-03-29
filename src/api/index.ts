@@ -54,6 +54,14 @@ app.use(cookieParser());
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
+const isPermissionDeniedError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("PERMISSION_DENIED") ||
+    message.includes("Missing or insufficient permissions")
+  );
+};
+
 const ensurePropertyExists = async (propertyId?: string | null) => {
   if (!propertyId) return true;
   const [projectDoc, submissionDoc] = await Promise.all([
@@ -128,14 +136,27 @@ app.get("/projects", async (req, res) => {
         .orderBy("created_at", "desc")
         .get()
         .catch(() => collections.projects.get()),
-      collections.submissions.where("status", "==", "Approved").get(),
+      collections.submissions
+        .where("status", "==", "Approved")
+        .get()
+        .catch((error) => {
+          if (isPermissionDeniedError(error)) {
+            console.warn(
+              "Submissions read denied while fetching public projects. Returning projects only."
+            );
+            return null;
+          }
+          throw error;
+        }),
     ]);
 
     const mappedProjects = projectsSnapshot.docs.map(mapProjectDoc);
-    const mappedSubmissions = submissionsSnapshot.docs
-      .map(mapSubmissionDoc)
-      .filter((s) => allowedSubmissionTypes.has(s.type))
-      .map(submissionToProperty);
+    const mappedSubmissions = submissionsSnapshot
+      ? submissionsSnapshot.docs
+          .map(mapSubmissionDoc)
+          .filter((s) => allowedSubmissionTypes.has(s.type))
+          .map(submissionToProperty)
+      : [];
 
     let combined = [...mappedProjects, ...mappedSubmissions].sort((a, b) => {
       if (!a.createdAt || !b.createdAt) return 0;
@@ -182,14 +203,29 @@ app.get("/projects/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [projectDoc, submissionDoc] = await Promise.all([
-      collections.projects.doc(id).get(),
-      collections.submissions.doc(id).get(),
-    ]);
+    const projectDoc = await collections.projects.doc(id).get();
 
     if (projectDoc.exists) {
       return res.json({ project: mapProjectDoc(projectDoc as any) });
     }
+
+    const submissionDoc = await collections.submissions
+      .doc(id)
+      .get()
+      .catch((error) => {
+        if (isPermissionDeniedError(error)) {
+          console.warn(
+            "Submissions read denied while fetching single public project. Returning projects only."
+          );
+          return null;
+        }
+        throw error;
+      });
+
+    if (!submissionDoc) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
     if (submissionDoc.exists) {
       const mapped = mapSubmissionDoc(submissionDoc as any);
       if (allowedSubmissionTypes.has(mapped.type)) {
@@ -208,14 +244,27 @@ app.get("/public/stats", async (_req, res) => {
   try {
     const [projectsSnapshot, submissionsSnapshot] = await Promise.all([
       collections.projects.get(),
-      collections.submissions.where("status", "==", "Approved").get(),
+      collections.submissions
+        .where("status", "==", "Approved")
+        .get()
+        .catch((error) => {
+          if (isPermissionDeniedError(error)) {
+            console.warn(
+              "Submissions read denied while fetching public stats. Returning projects-only stats."
+            );
+            return null;
+          }
+          throw error;
+        }),
     ]);
 
     const projects = projectsSnapshot.docs.map(mapProjectDoc);
-    const submissions = submissionsSnapshot.docs
-      .map(mapSubmissionDoc)
-      .filter((s) => allowedSubmissionTypes.has(s.type))
-      .map(submissionToProperty);
+    const submissions = submissionsSnapshot
+      ? submissionsSnapshot.docs
+          .map(mapSubmissionDoc)
+          .filter((s) => allowedSubmissionTypes.has(s.type))
+          .map(submissionToProperty)
+      : [];
 
     const all = [...projects, ...submissions];
 
