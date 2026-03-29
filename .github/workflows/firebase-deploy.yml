@@ -53,6 +53,12 @@ jobs:
               exit 1
               ;;
           esac
+          # Fallback to howzy-api if secret is not configured for this environment
+          if [ -z "${FIREBASE_PROJECT}" ]; then
+            echo "WARNING: Firebase project secret not set for branch '${BRANCH}', falling back to howzy-api"
+            FIREBASE_PROJECT="howzy-api"
+          fi
+          echo "Deploying to Firebase project: ${FIREBASE_PROJECT}"
           echo "FIREBASE_PROJECT=${FIREBASE_PROJECT}" >> "$GITHUB_ENV"
 
       - name: Authenticate to Google Cloud (Workload Identity Federation)
