@@ -1,0 +1,68 @@
+name: Firebase Functions Deploy
+
+on:
+  push:
+    branches:
+      - dev
+      - qa
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: firebase-deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+    permissions:
+      contents: read
+      id-token: write   # required for Workload Identity Federation
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Set Firebase Project
+        id: set-project
+        shell: bash
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+          case "${BRANCH}" in
+            dev)  FIREBASE_PROJECT="${{ secrets.FIREBASE_PROJECT_DEV }}" ;;
+            qa)   FIREBASE_PROJECT="${{ secrets.FIREBASE_PROJECT_QA }}" ;;
+            main) FIREBASE_PROJECT="${{ secrets.FIREBASE_PROJECT_PROD }}" ;;
+            *)
+              echo "Unsupported branch: ${BRANCH}" >&2
+              exit 1
+              ;;
+          esac
+          echo "FIREBASE_PROJECT=${FIREBASE_PROJECT}" >> "$GITHUB_ENV"
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/923565373621/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: github-actions-deploy@howzy-api.iam.gserviceaccount.com
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy to Firebase Functions
+        run: firebase deploy --only functions --project ${{ env.FIREBASE_PROJECT }} --non-interactive

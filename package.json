@@ -1,0 +1,55 @@
+{
+  "name": "howzy-backend-api",
+  "private": true,
+  "main": "lib/index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "lint": "eslint --ext .ts src",
+    "test": "jest --coverage",
+    "test:watch": "jest --watch",
+    "serve": "npm run build && firebase emulators:start --only functions,firestore,storage",
+    "deploy": "npm run build && firebase deploy --only functions",
+    "deploy:rules": "firebase deploy --only firestore:rules,storage",
+    "deploy:all": "npm run build && firebase deploy --only functions,firestore:rules,storage"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "roots": ["<rootDir>/src"],
+    "testMatch": ["**/*.test.ts"],
+    "moduleNameMapper": {
+      "^firebase-admin$": "<rootDir>/__mocks__/firebase-admin.ts"
+    },
+    "collectCoverageFrom": [
+      "src/lib/**/*.ts",
+      "src/middleware/**/*.ts",
+      "!src/lib/__tests__/**",
+      "!src/__mocks__/**"
+    ],
+    "coverageReporters": ["lcov", "text-summary"],
+    "coverageDirectory": "coverage"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.4.0",
+    "googleapis": "^171.4.0"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.13.10",
+    "eslint": "^9.19.0",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.6",
+    "typescript": "^5.8.2"
+  }
+}
