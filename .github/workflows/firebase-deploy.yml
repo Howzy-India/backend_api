@@ -70,5 +70,17 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
+      - name: Verify credentials and secret access
+        run: |
+          echo "Active identity:"
+          gcloud auth list
+          echo "Resolved project: $FIREBASE_PROJECT"
+          echo "Project number:"
+          gcloud projects describe "$FIREBASE_PROJECT" --format="value(projectNumber)"
+          echo "Testing secret access:"
+          gcloud secrets versions access 1 --secret=HOWZY_BOOTSTRAP_KEY --project="$FIREBASE_PROJECT" > /dev/null \
+            && echo "Secret access: OK" \
+            || echo "Secret access: FAILED"
+
       - name: Deploy to Firebase Functions
-        run: firebase deploy --only functions --project ${{ env.FIREBASE_PROJECT }} --non-interactive
+        run: firebase deploy --only functions --project "$FIREBASE_PROJECT" --non-interactive
