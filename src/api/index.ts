@@ -2,6 +2,7 @@ import { onRequest } from "firebase-functions/v2/https";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import { randomInt } from "crypto";
 import { google } from "googleapis";
 import { collections, FieldValue, db, storage } from "../lib/firestore";
 import {
@@ -422,7 +423,7 @@ app.patch("/submissions/:id/status", ...requireAdmin, async (req, res) => {
       const cityCode = details.city
         ? String(details.city).substring(0, 3).toUpperCase()
         : "GEN";
-      const sequenceNumber = Math.floor(Math.random() * 9000) + 1000;
+      const sequenceNumber = randomInt(1000, 10000);
       generatedPartnerId = `HZ-${cityCode}-PTN-${sequenceNumber}`;
       details.partnerId = generatedPartnerId;
 
