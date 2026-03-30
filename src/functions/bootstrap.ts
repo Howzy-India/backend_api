@@ -12,8 +12,9 @@ export const bootstrapSuperAdmin = onRequest(
       return;
     }
 
-    const providedKey = request.headers["x-bootstrap-key"];
-    if (providedKey !== bootstrapKey.value()) {
+    const providedKey = String(request.headers["x-bootstrap-key"] ?? "").trim();
+    const expectedKey = bootstrapKey.value().trim();
+    if (providedKey !== expectedKey) {
       response.status(403).json({ error: "Invalid bootstrap key." });
       return;
     }
