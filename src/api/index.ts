@@ -117,6 +117,116 @@ const ensureGoogleAuth = (req: express.Request, res: express.Response) => {
   return oauth2Client;
 };
 
+class ApiHttpError extends Error {
+  statusCode: number;
+
+  constructor(statusCode: number, message: string) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+type AdminUserStatus = "active" | "disabled";
+
+const isAdminUserStatus = (value: unknown): value is AdminUserStatus =>
+  value === "active" || value === "disabled";
+
+const nonEmpty = (value: unknown): string | undefined => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+const assertManageableAdminUser = async (uid: string) => {
+  if (!uid) {
+    throw new ApiHttpError(400, "uid is required");
+  }
+
+  const [authUser, userDoc] = await Promise.all([
+    auth.getUser(uid),
+    collections.users.doc(uid).get(),
+  ]);
+
+  const existingRole =
+    (authUser.customClaims?.role as string | undefined) ??
+    (userDoc.data()?.role as string | undefined);
+
+  if (existingRole !== "admin") {
+    throw new ApiHttpError(
+      400,
+      "Only admin users can be managed from this endpoint"
+    );
+  }
+};
+
+const buildAdminAuthUpdate = (payload: {
+  email?: unknown;
+  password?: unknown;
+  displayName?: unknown;
+  status?: unknown;
+}) => {
+  const authUpdate: {
+    email?: string;
+    password?: string;
+    displayName?: string;
+    disabled?: boolean;
+  } = {};
+
+  const email = nonEmpty(payload.email);
+  if (email) authUpdate.email = email;
+
+  const password = nonEmpty(payload.password);
+  if (password) authUpdate.password = password;
+
+  const displayName = nonEmpty(payload.displayName);
+  if (displayName) authUpdate.displayName = displayName;
+
+  if (isAdminUserStatus(payload.status)) {
+    authUpdate.disabled = payload.status === "disabled";
+  }
+
+  return authUpdate;
+};
+
+const buildAdminFirestoreUpdate = ({
+  authUpdate,
+  status,
+  updatedBy,
+}: {
+  authUpdate: { email?: string; displayName?: string };
+  status?: unknown;
+  updatedBy?: string;
+}) => {
+  const firestoreUpdate: Record<string, unknown> = {
+    updatedAt: FieldValue.serverTimestamp(),
+    updatedBy,
+  };
+
+  if (authUpdate.email) firestoreUpdate.email = authUpdate.email;
+  if (authUpdate.displayName) {
+    firestoreUpdate.displayName = authUpdate.displayName;
+    firestoreUpdate.name = authUpdate.displayName;
+  }
+  if (isAdminUserStatus(status)) {
+    firestoreUpdate.status = status;
+  }
+
+  return firestoreUpdate;
+};
+
+const handleAdminUserApiError = (
+  action: string,
+  error: unknown,
+  res: express.Response
+) => {
+  if (error instanceof ApiHttpError) {
+    res.status(error.statusCode).json({ error: error.message });
+    return;
+  }
+  console.error(`Error ${action}:`, error);
+  res.status(500).json({ error: `Failed to ${action}` });
+};
+
 // ── Health ────────────────────────────────────────────────────────────
 
 app.get("/health", async (_req, res) => {
@@ -836,95 +946,36 @@ app.post("/admin/users", requireAuth, requireRole("super_admin"), async (req, re
 app.patch("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (req, res) => {
   try {
     const { uid } = req.params;
-    const { email, password, displayName, status } = req.body ?? {};
-
-    if (!uid) {
-      res.status(400).json({ error: "uid is required" });
-      return;
-    }
-
-    const [authUser, userDoc] = await Promise.all([
-      auth.getUser(uid),
-      collections.users.doc(uid).get(),
-    ]);
-
-    const existingRole =
-      (authUser.customClaims?.role as string | undefined) ??
-      (userDoc.data()?.role as string | undefined);
-
-    if (existingRole !== "admin") {
-      res.status(400).json({ error: "Only admin users can be updated from this endpoint" });
-      return;
-    }
-
-    const authUpdate: {
-      email?: string;
-      password?: string;
-      displayName?: string;
-      disabled?: boolean;
-    } = {};
-    if (typeof email === "string" && email.trim()) authUpdate.email = email.trim();
-    if (typeof password === "string" && password.trim()) authUpdate.password = password;
-    if (typeof displayName === "string" && displayName.trim()) {
-      authUpdate.displayName = displayName.trim();
-    }
-    if (status === "active" || status === "disabled") {
-      authUpdate.disabled = status === "disabled";
-    }
+    await assertManageableAdminUser(uid);
+    const authUpdate = buildAdminAuthUpdate(req.body ?? {});
 
     if (Object.keys(authUpdate).length > 0) {
       await auth.updateUser(uid, authUpdate);
     }
 
-    const firestoreUpdate: Record<string, unknown> = {
-      updatedAt: FieldValue.serverTimestamp(),
+    const firestoreUpdate = buildAdminFirestoreUpdate({
+      authUpdate,
+      status: req.body?.status,
       updatedBy: req.user?.uid,
-    };
-    if (authUpdate.email) firestoreUpdate.email = authUpdate.email;
-    if (authUpdate.displayName) {
-      firestoreUpdate.displayName = authUpdate.displayName;
-      firestoreUpdate.name = authUpdate.displayName;
-    }
-    if (status === "active" || status === "disabled") {
-      firestoreUpdate.status = status;
-    }
+    });
 
     await collections.users.doc(uid).set(firestoreUpdate, { merge: true });
     res.json({ success: true });
   } catch (error) {
-    console.error("Error updating admin user:", error);
-    res.status(500).json({ error: "Failed to update admin user" });
+    handleAdminUserApiError("updating admin user", error, res);
   }
 });
 
 app.delete("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (req, res) => {
   try {
     const { uid } = req.params;
-    if (!uid) {
-      res.status(400).json({ error: "uid is required" });
-      return;
-    }
-
-    const [authUser, userDoc] = await Promise.all([
-      auth.getUser(uid),
-      collections.users.doc(uid).get(),
-    ]);
-
-    const existingRole =
-      (authUser.customClaims?.role as string | undefined) ??
-      (userDoc.data()?.role as string | undefined);
-
-    if (existingRole !== "admin") {
-      res.status(400).json({ error: "Only admin users can be deleted from this endpoint" });
-      return;
-    }
+    await assertManageableAdminUser(uid);
 
     await auth.deleteUser(uid);
     await collections.users.doc(uid).delete();
     res.json({ success: true });
   } catch (error) {
-    console.error("Error deleting admin user:", error);
-    res.status(500).json({ error: "Failed to delete admin user" });
+    handleAdminUserApiError("deleting admin user", error, res);
   }
 });
 
