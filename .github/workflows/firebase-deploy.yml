@@ -3,13 +3,11 @@ name: Firebase Functions Deploy
 on:
   push:
     branches:
-      - dev
-      - qa
       - main
   workflow_dispatch:
 
 concurrency:
-  group: firebase-deploy-${{ github.ref_name }}
+  group: firebase-deploy-main
   cancel-in-progress: false
 
 env:
@@ -18,7 +16,7 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+    environment: prod
     permissions:
       contents: read
       id-token: write   # required for Workload Identity Federation
@@ -40,22 +38,12 @@ jobs:
         run: npm run build
 
       - name: Set Firebase Project
-        id: set-project
         shell: bash
         run: |
-          BRANCH="${GITHUB_REF_NAME}"
-          case "${BRANCH}" in
-            dev)  FIREBASE_PROJECT="${{ secrets.FIREBASE_PROJECT_DEV }}" ;;
-            qa)   FIREBASE_PROJECT="${{ secrets.FIREBASE_PROJECT_QA }}" ;;
-            main) FIREBASE_PROJECT="${{ secrets.FIREBASE_PROJECT_PROD }}" ;;
-            *)
-              echo "Unsupported branch: ${BRANCH}" >&2
-              exit 1
-              ;;
-          esac
-          # Fallback to howzy-api if secret is not configured for this environment
+          FIREBASE_PROJECT="${{ secrets.FIREBASE_PROJECT_PROD }}"
+          # Fallback to howzy-api if prod secret is not configured
           if [ -z "${FIREBASE_PROJECT}" ]; then
-            echo "WARNING: Firebase project secret not set for branch '${BRANCH}', falling back to howzy-api"
+            echo "WARNING: FIREBASE_PROJECT_PROD not set, falling back to howzy-api"
             FIREBASE_PROJECT="howzy-api"
           fi
           echo "Deploying to Firebase project: ${FIREBASE_PROJECT}"
