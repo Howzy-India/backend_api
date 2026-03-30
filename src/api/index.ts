@@ -4,7 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { randomInt } from "node:crypto";
 import { google } from "googleapis";
-import { collections, FieldValue, db, storage } from "../lib/firestore";
+import { collections, FieldValue, db, storage, auth } from "../lib/firestore";
 import {
   mapProjectDoc,
   mapSubmissionDoc,
@@ -775,6 +775,156 @@ app.get("/admin/partners", ...requireAdmin, async (_req, res) => {
   } catch (error) {
     console.error("Error fetching partners:", error);
     res.status(500).json({ error: "Failed to fetch partners" });
+  }
+});
+
+app.get("/admin/users", requireAuth, requireRole("super_admin"), async (_req, res) => {
+  try {
+    const snapshot = await collections.users
+      .where("role", "==", "admin")
+      .orderBy("createdAt", "desc")
+      .get()
+      .catch(() => collections.users.where("role", "==", "admin").get());
+
+    const users = snapshot.docs.map((doc) => {
+      const data = doc.data() || {};
+      return {
+        uid: doc.id,
+        email: data.email ?? "",
+        displayName: data.displayName ?? data.name ?? "",
+        role: data.role ?? "admin",
+        status: data.status ?? "active",
+        createdAt: toISODate(data.createdAt ?? data.created_at),
+      };
+    });
+
+    res.json({ users });
+  } catch (error) {
+    console.error("Error fetching admin users:", error);
+    res.status(500).json({ error: "Failed to fetch admin users" });
+  }
+});
+
+app.post("/admin/users", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { email, password, displayName } = req.body ?? {};
+    if (!email || !password || !displayName) {
+      res.status(400).json({ error: "email, password and displayName are required" });
+      return;
+    }
+
+    const userRecord = await auth.createUser({ email, password, displayName });
+    await auth.setCustomUserClaims(userRecord.uid, { role: "admin" });
+
+    await collections.users.doc(userRecord.uid).set({
+      email,
+      displayName,
+      name: displayName,
+      role: "admin",
+      status: "active",
+      createdAt: FieldValue.serverTimestamp(),
+      createdBy: req.user?.uid,
+    });
+
+    res.json({ success: true, uid: userRecord.uid });
+  } catch (error) {
+    console.error("Error creating admin user:", error);
+    res.status(500).json({ error: "Failed to create admin user" });
+  }
+});
+
+app.patch("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { email, password, displayName, status } = req.body ?? {};
+
+    if (!uid) {
+      res.status(400).json({ error: "uid is required" });
+      return;
+    }
+
+    const [authUser, userDoc] = await Promise.all([
+      auth.getUser(uid),
+      collections.users.doc(uid).get(),
+    ]);
+
+    const existingRole =
+      (authUser.customClaims?.role as string | undefined) ??
+      (userDoc.data()?.role as string | undefined);
+
+    if (existingRole !== "admin") {
+      res.status(400).json({ error: "Only admin users can be updated from this endpoint" });
+      return;
+    }
+
+    const authUpdate: {
+      email?: string;
+      password?: string;
+      displayName?: string;
+      disabled?: boolean;
+    } = {};
+    if (typeof email === "string" && email.trim()) authUpdate.email = email.trim();
+    if (typeof password === "string" && password.trim()) authUpdate.password = password;
+    if (typeof displayName === "string" && displayName.trim()) {
+      authUpdate.displayName = displayName.trim();
+    }
+    if (status === "active" || status === "disabled") {
+      authUpdate.disabled = status === "disabled";
+    }
+
+    if (Object.keys(authUpdate).length > 0) {
+      await auth.updateUser(uid, authUpdate);
+    }
+
+    const firestoreUpdate: Record<string, unknown> = {
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: req.user?.uid,
+    };
+    if (authUpdate.email) firestoreUpdate.email = authUpdate.email;
+    if (authUpdate.displayName) {
+      firestoreUpdate.displayName = authUpdate.displayName;
+      firestoreUpdate.name = authUpdate.displayName;
+    }
+    if (status === "active" || status === "disabled") {
+      firestoreUpdate.status = status;
+    }
+
+    await collections.users.doc(uid).set(firestoreUpdate, { merge: true });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error updating admin user:", error);
+    res.status(500).json({ error: "Failed to update admin user" });
+  }
+});
+
+app.delete("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { uid } = req.params;
+    if (!uid) {
+      res.status(400).json({ error: "uid is required" });
+      return;
+    }
+
+    const [authUser, userDoc] = await Promise.all([
+      auth.getUser(uid),
+      collections.users.doc(uid).get(),
+    ]);
+
+    const existingRole =
+      (authUser.customClaims?.role as string | undefined) ??
+      (userDoc.data()?.role as string | undefined);
+
+    if (existingRole !== "admin") {
+      res.status(400).json({ error: "Only admin users can be deleted from this endpoint" });
+      return;
+    }
+
+    await auth.deleteUser(uid);
+    await collections.users.doc(uid).delete();
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting admin user:", error);
+    res.status(500).json({ error: "Failed to delete admin user" });
   }
 });
 
