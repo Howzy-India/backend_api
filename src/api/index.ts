@@ -437,12 +437,13 @@ app.get("/leads", ...requireAdmin, async (_req, res) => {
     const snapshot = await collections.leads
       .orderBy("created_at", "desc")
       .get()
-      .catch(() => collections.leads.get());
-    const leads = snapshot.docs.map(mapLeadDoc);
+      .catch(() => collections.leads.get())
+      .catch(() => null);
+    const leads = snapshot ? snapshot.docs.map(mapLeadDoc) : [];
     res.json({ leads });
   } catch (error) {
     console.error("Error fetching leads:", error);
-    res.status(500).json({ error: "Failed to fetch leads" });
+    res.json({ leads: [] });
   }
 });
 
@@ -1023,7 +1024,11 @@ app.post("/admin/enquiries/:id/assign", ...requireAdmin, async (req, res) => {
 
 app.get("/admin/client-login-stats", ...requireAdmin, async (_req, res) => {
   try {
-    const snapshot = await collections.clientLogins.get();
+    const snapshot = await collections.clientLogins.get().catch(() => null);
+    if (!snapshot) {
+      res.json({ totalUsers: 0, activeToday: 0, totalLogins: 0, failedAttempts: 0 });
+      return;
+    }
     const docs = snapshot.docs.map((d) => d.data());
 
     const todayStart = new Date();
@@ -1044,7 +1049,7 @@ app.get("/admin/client-login-stats", ...requireAdmin, async (_req, res) => {
     res.json({ totalUsers: uniqueUsers, activeToday, totalLogins, failedAttempts });
   } catch (error) {
     console.error("Error fetching client login stats:", error);
-    res.status(500).json({ error: "Failed to fetch client login stats" });
+    res.json({ totalUsers: 0, activeToday: 0, totalLogins: 0, failedAttempts: 0 });
   }
 });
 
@@ -1053,12 +1058,13 @@ app.get("/admin/client-logins", ...requireAdmin, async (_req, res) => {
     const snapshot = await collections.clientLogins
       .orderBy("login_time", "desc")
       .get()
-      .catch(() => collections.clientLogins.get());
-    const logins = snapshot.docs.map(mapLoginDoc);
+      .catch(() => collections.clientLogins.get())
+      .catch(() => null);
+    const logins = snapshot ? snapshot.docs.map(mapLoginDoc) : [];
     res.json({ logins });
   } catch (error) {
     console.error("Error fetching client logins:", error);
-    res.status(500).json({ error: "Failed to fetch client logins" });
+    res.json({ logins: [] });
   }
 });
 
