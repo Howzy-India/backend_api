@@ -1202,6 +1202,28 @@ app.post("/client/login-track", async (req, res) => {
   }
 });
 
+app.post("/client/logout-track", async (req, res) => {
+  try {
+    const { id } = req.body;
+    if (!id) {
+      res.status(400).json({ error: "Missing login record id" });
+      return;
+    }
+    await collections.clientLogins.doc(id).update({
+      logout_time: FieldValue.serverTimestamp(),
+    });
+    res.json({ success: true });
+  } catch (error: unknown) {
+    if (isPermissionDeniedError(error)) {
+      console.warn("Client logout tracking denied by Firestore permissions. Continuing.");
+      res.json({ success: true, skipped: "permission_denied" });
+      return;
+    }
+    console.error("Error tracking logout:", error);
+    res.status(500).json({ error: "Failed to track logout" });
+  }
+});
+
 // ── Pilot / Partner ──────────────────────────────────────────────────
 
 const fetchAssignedEnquiries = async (
