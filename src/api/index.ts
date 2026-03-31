@@ -1021,6 +1021,33 @@ app.post("/admin/enquiries/:id/assign", ...requireAdmin, async (req, res) => {
   }
 });
 
+app.get("/admin/client-login-stats", ...requireAdmin, async (_req, res) => {
+  try {
+    const snapshot = await collections.clientLogins.get();
+    const docs = snapshot.docs.map((d) => d.data());
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const uniqueUsers = new Set(docs.map((d) => d.email as string)).size;
+    const activeToday = new Set(
+      docs
+        .filter((d) => {
+          const t = d.login_time?.toDate?.() ?? new Date(d.login_time);
+          return t >= todayStart;
+        })
+        .map((d) => d.email as string)
+    ).size;
+    const totalLogins = docs.length;
+    const failedAttempts = docs.filter((d) => d.status === "Failed").length;
+
+    res.json({ totalUsers: uniqueUsers, activeToday, totalLogins, failedAttempts });
+  } catch (error) {
+    console.error("Error fetching client login stats:", error);
+    res.status(500).json({ error: "Failed to fetch client login stats" });
+  }
+});
+
 app.get("/admin/client-logins", ...requireAdmin, async (_req, res) => {
   try {
     const snapshot = await collections.clientLogins
