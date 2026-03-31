@@ -1071,6 +1071,39 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin"), 
       });
     }
 
+    const callerRole = req.user?.role;
+
+    // admin role: property requires super_admin approval — create as pending submission
+    if (callerRole === "admin") {
+      const submissionTypeMap: Record<string, string> = {
+        project: "Project",
+        plot: "Plot",
+        farmland: "Farm Land",
+      };
+      const submissionType = submissionTypeMap[String(propertyType)] ?? "Project";
+      const docRef = collections.submissions.doc();
+      await docRef.set({
+        id: docRef.id,
+        type: submissionType,
+        name: String(name).trim(),
+        email: req.user?.email ?? "",
+        status: "Pending",
+        details: {
+          location: nonEmpty(location) ?? "",
+          developerName: nonEmpty(developerName) ?? "",
+          projectType: nonEmpty(projectType) ?? "",
+          city: nonEmpty(city) ?? "",
+          reraNumber: nonEmpty(reraNumber) ?? "",
+          usp: nonEmpty(usp) ?? "",
+          teaser: nonEmpty(teaser) ?? "",
+          propertyType: String(propertyType),
+        },
+        created_at: FieldValue.serverTimestamp(),
+      });
+      return res.status(201).json({ id: docRef.id, success: true, pending: true });
+    }
+
+    // super_admin: publish directly to projects collection
     const docRef = collections.projects.doc();
     await docRef.set({
       name: String(name).trim(),
