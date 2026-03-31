@@ -134,7 +134,7 @@ const isAdminUserStatus = (value: unknown): value is AdminUserStatus =>
 const nonEmpty = (value: unknown): string | undefined => {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
+  return trimmed || undefined;
 };
 
 const assertManageableAdminUser = async (uid: string) => {
