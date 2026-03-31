@@ -979,6 +979,75 @@ app.delete("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (
   }
 });
 
+// ── Admin Properties ─────────────────────────────────────────────────
+
+const ALLOWED_PROPERTY_TYPES = ["project", "plot", "farmland"] as const;
+type AllowedPropertyType = (typeof ALLOWED_PROPERTY_TYPES)[number];
+const isAllowedPropertyType = (v: unknown): v is AllowedPropertyType =>
+  ALLOWED_PROPERTY_TYPES.includes(v as AllowedPropertyType);
+
+app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin"), async (req, res) => {
+  try {
+    const {
+      name,
+      location,
+      developerName,
+      propertyType,
+      projectType,
+      city,
+      reraNumber,
+      status,
+      usp,
+      teaser,
+    } = req.body as Record<string, unknown>;
+
+    if (!nonEmpty(name)) {
+      return res.status(400).json({ error: "name is required" });
+    }
+    if (!isAllowedPropertyType(propertyType)) {
+      return res.status(400).json({
+        error: `propertyType must be one of: ${ALLOWED_PROPERTY_TYPES.join(", ")}`,
+      });
+    }
+
+    const docRef = collections.projects.doc();
+    await docRef.set({
+      name: String(name).trim(),
+      location: nonEmpty(location) ?? "",
+      developerName: nonEmpty(developerName) ?? "",
+      propertyType,
+      projectType: nonEmpty(projectType) ?? "",
+      city: nonEmpty(city) ?? "",
+      reraNumber: nonEmpty(reraNumber) ?? "",
+      status: nonEmpty(status) ?? "Listed",
+      usp: nonEmpty(usp) ?? "",
+      teaser: nonEmpty(teaser) ?? "",
+      created_at: FieldValue.serverTimestamp(),
+    });
+
+    res.status(201).json({ id: docRef.id, success: true });
+  } catch (error) {
+    console.error("Error creating property:", error);
+    res.status(500).json({ error: "Failed to create property" });
+  }
+});
+
+app.delete("/admin/properties/:id", requireAuth, requireRole("super_admin", "admin"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const docRef = collections.projects.doc(id);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      return res.status(404).json({ error: "Property not found" });
+    }
+    await docRef.delete();
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting property:", error);
+    res.status(500).json({ error: "Failed to delete property" });
+  }
+});
+
 app.post("/admin/enquiries/:id/assign", ...requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
