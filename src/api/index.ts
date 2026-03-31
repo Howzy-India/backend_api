@@ -134,7 +134,7 @@ const isAdminUserStatus = (value: unknown): value is AdminUserStatus =>
 const nonEmpty = (value: unknown): string | undefined => {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
+  return trimmed || undefined;
 };
 
 const assertManageableAdminUser = async (uid: string) => {
@@ -891,23 +891,22 @@ app.get("/admin/partners", ...requireAdmin, async (_req, res) => {
 
 app.get("/admin/users", requireAuth, requireRole("super_admin"), async (_req, res) => {
   try {
-    const snapshot = await collections.users
-      .where("role", "==", "admin")
-      .orderBy("createdAt", "desc")
-      .get()
-      .catch(() => collections.users.where("role", "==", "admin").get());
-
-    const users = snapshot.docs.map((doc) => {
-      const data = doc.data() || {};
-      return {
-        uid: doc.id,
-        email: data.email ?? "",
-        displayName: data.displayName ?? data.name ?? "",
-        role: data.role ?? "admin",
-        status: data.status ?? "active",
-        createdAt: toISODate(data.createdAt ?? data.created_at),
-      };
-    });
+    const listResult = await auth.listUsers(1000);
+    const users = listResult.users
+      .filter((u) => (u.customClaims as Record<string, unknown> | undefined)?.role === "admin")
+      .map((u) => ({
+        uid: u.uid,
+        email: u.email ?? "",
+        displayName: u.displayName ?? "",
+        role: "admin",
+        status: u.disabled ? "disabled" : "active",
+        createdAt: u.metadata.creationTime ?? null,
+      }))
+      .sort((a, b) => {
+        if (!a.createdAt) return 1;
+        if (!b.createdAt) return -1;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
 
     res.json({ users });
   } catch (error) {
