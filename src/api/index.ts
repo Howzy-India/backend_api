@@ -979,6 +979,67 @@ app.delete("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (
   }
 });
 
+// ── Admin: Create User With Any Role ─────────────────────────────────
+
+const MANAGEABLE_ROLES = ["admin", "agent", "partner", "client"] as const;
+type ManageableRole = (typeof MANAGEABLE_ROLES)[number];
+const isManageableRole = (v: unknown): v is ManageableRole =>
+  MANAGEABLE_ROLES.includes(v as ManageableRole);
+
+app.post("/admin/create-user", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { email, password, displayName, role } = req.body ?? {};
+    if (!email || !password || !displayName) {
+      return res.status(400).json({ error: "email, password and displayName are required" });
+    }
+    if (!isManageableRole(role)) {
+      return res.status(400).json({
+        error: `role must be one of: ${MANAGEABLE_ROLES.join(", ")}`,
+      });
+    }
+
+    const userRecord = await auth.createUser({ email, password, displayName });
+    await auth.setCustomUserClaims(userRecord.uid, { role });
+
+    await collections.users.doc(userRecord.uid).set({
+      email,
+      displayName,
+      name: displayName,
+      role,
+      status: "active",
+      createdAt: FieldValue.serverTimestamp(),
+      createdBy: req.user?.uid,
+    });
+
+    res.status(201).json({ success: true, uid: userRecord.uid });
+  } catch (error) {
+    console.error("Error creating user:", error);
+    res.status(500).json({ error: "Failed to create user" });
+  }
+});
+
+app.delete("/admin/create-user/:uid", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { uid } = req.params;
+    if (!uid) return res.status(400).json({ error: "uid is required" });
+
+    const authUser = await auth.getUser(uid).catch(() => null);
+    if (!authUser) return res.status(404).json({ error: "User not found" });
+
+    const existingRole = authUser.customClaims?.role as string | undefined;
+    if (existingRole === "super_admin") {
+      return res.status(403).json({ error: "Cannot delete super_admin users" });
+    }
+
+    await auth.deleteUser(uid);
+    await collections.users.doc(uid).delete();
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ error: "Failed to delete user" });
+  }
+});
+
 // ── Admin Properties ─────────────────────────────────────────────────
 
 const ALLOWED_PROPERTY_TYPES = ["project", "plot", "farmland"] as const;
