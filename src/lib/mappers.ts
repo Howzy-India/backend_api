@@ -61,6 +61,7 @@ export const submissionToProperty = (
   let propertyType = "project";
   if (submission.type === "Farm Land") propertyType = "farmland";
   if (submission.type === "Plot") propertyType = "plot";
+  if (submission.type === "Project") propertyType = "project";
 
   return {
     id: submission.id,

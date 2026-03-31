@@ -158,6 +158,10 @@ describe("allowedSubmissionTypes", () => {
     expect(allowedSubmissionTypes.has("Plot")).toBe(true);
   });
 
+  it("contains Project", () => {
+    expect(allowedSubmissionTypes.has("Project")).toBe(true);
+  });
+
   it("contains Residential", () => {
     expect(allowedSubmissionTypes.has("Residential")).toBe(true);
   });

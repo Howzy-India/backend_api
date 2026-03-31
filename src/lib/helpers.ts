@@ -43,6 +43,7 @@ export const chunkArray = <T>(items: T[], size = 10): T[][] => {
 export const allowedSubmissionTypes = new Set([
   "Farm Land",
   "Plot",
+  "Project",
   "Residential",
   "Commercial",
 ]);
