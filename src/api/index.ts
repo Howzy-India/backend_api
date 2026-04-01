@@ -432,7 +432,7 @@ app.get("/public/stats", async (_req, res) => {
 
 // ── Leads ────────────────────────────────────────────────────────────
 
-app.get("/leads", ...requireAdmin, async (_req, res) => {
+app.get("/leads", requireAuth, requireRole("agent", "admin", "super_admin"), async (_req, res) => {
   try {
     const snapshot = await collections.leads
       .orderBy("created_at", "desc")
@@ -533,7 +533,7 @@ app.post("/leads/auto-assign", ...requireAdmin, async (_req, res) => {
 
 // ── Earnings ─────────────────────────────────────────────────────────
 
-app.get("/earnings", ...requireAdmin, async (_req, res) => {
+app.get("/earnings", requireAuth, requireRole("agent", "admin", "super_admin"), async (_req, res) => {
   try {
     const snapshot = await collections.bookings
       .orderBy("created_at", "desc")
@@ -1404,7 +1404,7 @@ const fetchAssignedEnquiries = async (
     });
 };
 
-app.get("/pilot/assigned-enquiries", requireAuth, requireRole("sales", "admin", "super_admin"), async (_req, res) => {
+app.get("/pilot/assigned-enquiries", requireAuth, requireRole("agent", "admin", "super_admin"), async (_req, res) => {
   try {
     const enquiries = await fetchAssignedEnquiries((e) =>
       Boolean(e.assigned_sales_id)
