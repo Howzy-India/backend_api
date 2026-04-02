@@ -1299,7 +1299,6 @@ app.get("/client/enquiries", requireAuth, async (req, res) => {
 
     const snapshot = await collections.enquiries
       .where("email", "==", email)
-      .where("status", "==", "Approved")
       .orderBy("created_at", "desc")
       .get()
       .catch((error) => {
@@ -1314,10 +1313,7 @@ app.get("/client/enquiries", requireAuth, async (req, res) => {
       return;
     }
     const enquiries = snapshot.docs
-      .filter(
-        (doc) =>
-          doc.data().email === email && doc.data().status === "Approved"
-      )
+      .filter((doc) => doc.data().email === email)
       .map(mapEnquiryDoc);
     res.json({ enquiries });
   } catch (error) {
