@@ -7,6 +7,7 @@ import {
   mapBookingDoc,
   mapLoginDoc,
   mapUserDoc,
+  mapResaleDoc,
 } from "../mappers";
 
 // ── Mock Firestore QueryDocumentSnapshot ──────────────────────────────────────
@@ -367,5 +368,100 @@ describe("mapUserDoc", () => {
   it("defaults activeLeads to 0", () => {
     const doc = mockDoc("user-4", {});
     expect(mapUserDoc(doc).activeLeads).toBe(0);
+  });
+});
+
+// ── mapResaleDoc ──────────────────────────────────────────────────────────────
+
+describe("mapResaleDoc", () => {
+  it("maps all fields correctly", () => {
+    const doc = mockDoc("resale-1", {
+      title: "3BHK Sea View Apartment",
+      description: "Beautiful apartment with sea view",
+      price: 8500000,
+      propertyType: "Apartment",
+      city: "Mumbai",
+      location: "Bandra",
+      mapLink: "https://maps.google.com/test",
+      area: "1400 sqft",
+      bedrooms: 3,
+      bathrooms: 2,
+      floor: 5,
+      totalFloors: 12,
+      amenities: ["Gym", "Pool"],
+      possession: "Immediate",
+      images: ["https://img.example.com/1.jpg"],
+      submittedBy: "client@example.com",
+      submittedByUid: "uid-123",
+      submittedByRole: "client",
+      status: "Listed",
+      remarks: null,
+      approvedBy: "admin@howzy.in",
+    });
+
+    const result = mapResaleDoc(doc);
+
+    expect(result.id).toBe("resale-1");
+    expect(result.title).toBe("3BHK Sea View Apartment");
+    expect(result.price).toBe(8500000);
+    expect(result.propertyType).toBe("Apartment");
+    expect(result.city).toBe("Mumbai");
+    expect(result.location).toBe("Bandra");
+    expect(result.area).toBe("1400 sqft");
+    expect(result.bedrooms).toBe(3);
+    expect(result.bathrooms).toBe(2);
+    expect(result.floor).toBe(5);
+    expect(result.totalFloors).toBe(12);
+    expect(result.amenities).toEqual(["Gym", "Pool"]);
+    expect(result.possession).toBe("Immediate");
+    expect(result.images).toEqual(["https://img.example.com/1.jpg"]);
+    expect(result.submittedBy).toBe("client@example.com");
+    expect(result.submittedByUid).toBe("uid-123");
+    expect(result.submittedByRole).toBe("client");
+    expect(result.status).toBe("Listed");
+    expect(result.approvedBy).toBe("admin@howzy.in");
+  });
+
+  it("defaults status to 'Pending' when absent", () => {
+    const doc = mockDoc("resale-2", { title: "Test Property" });
+    expect(mapResaleDoc(doc).status).toBe("Pending");
+  });
+
+  it("defaults price to 0 when absent", () => {
+    const doc = mockDoc("resale-3", {});
+    expect(mapResaleDoc(doc).price).toBe(0);
+  });
+
+  it("defaults amenities and images to empty arrays when absent", () => {
+    const doc = mockDoc("resale-4", {});
+    const result = mapResaleDoc(doc);
+    expect(result.amenities).toEqual([]);
+    expect(result.images).toEqual([]);
+  });
+
+  it("defaults optional fields to null when absent", () => {
+    const doc = mockDoc("resale-5", {});
+    const result = mapResaleDoc(doc);
+    expect(result.mapLink).toBeNull();
+    expect(result.bedrooms).toBeNull();
+    expect(result.bathrooms).toBeNull();
+    expect(result.floor).toBeNull();
+    expect(result.totalFloors).toBeNull();
+    expect(result.possession).toBeNull();
+    expect(result.remarks).toBeNull();
+    expect(result.approvedBy).toBeNull();
+  });
+
+  it("defaults submittedByRole to 'client' when absent", () => {
+    const doc = mockDoc("resale-6", {});
+    expect(mapResaleDoc(doc).submittedByRole).toBe("client");
+  });
+
+  it("defaults title and description to empty strings when absent", () => {
+    const doc = mockDoc("resale-7", {});
+    const result = mapResaleDoc(doc);
+    expect(result.title).toBe("");
+    expect(result.description).toBe("");
+    expect(result.city).toBe("");
   });
 });

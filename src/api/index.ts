@@ -14,6 +14,7 @@ import {
   mapBookingDoc,
   mapLoginDoc,
   mapUserDoc,
+  mapResaleDoc,
 } from "../lib/mappers";
 import {
   allowedSubmissionTypes,
@@ -1832,6 +1833,416 @@ app.post(
     } catch (error) {
       console.error("Error logging location:", error);
       res.status(500).json({ error: "Failed to log location" });
+    }
+  }
+);
+
+// ── Resale Properties ────────────────────────────────────────────────────────
+
+const ALLOWED_RESALE_PROPERTY_TYPES = new Set([
+  "Apartment",
+  "Villa",
+  "Plot",
+  "Farm Land",
+  "Commercial",
+]);
+
+// Public: list all Listed resale properties (no auth required)
+app.get("/resale", async (req, res) => {
+  try {
+    const { city, type, q } = req.query as Record<string, string>;
+
+    const snapshot = await collections.resaleProperties
+      .where("status", "==", "Listed")
+      .orderBy("created_at", "desc")
+      .get()
+      .catch((error) => {
+        if (isPermissionDeniedError(error)) return null;
+        throw error;
+      });
+
+    let results = snapshot ? snapshot.docs.map(mapResaleDoc) : [];
+
+    if (q) {
+      const lq = q.toLowerCase();
+      results = results.filter(
+        (p) =>
+          p.title?.toLowerCase().includes(lq) ||
+          p.location?.toLowerCase().includes(lq) ||
+          p.city?.toLowerCase().includes(lq) ||
+          p.description?.toLowerCase().includes(lq)
+      );
+    }
+    if (city) {
+      results = results.filter(
+        (p) => p.city?.toLowerCase() === city.toLowerCase()
+      );
+    }
+    if (type) {
+      results = results.filter(
+        (p) => p.propertyType?.toLowerCase() === type.toLowerCase()
+      );
+    }
+
+    res.json({ resaleProperties: results });
+  } catch (error: any) {
+    console.error("Error fetching resale properties:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to fetch resale properties", detail: error?.message ?? String(error) });
+  }
+});
+
+// Authenticated: get current user's own resale submissions
+// NOTE: must be registered BEFORE /resale/:id to avoid route collision
+app.get("/resale/mine", requireAuth, async (req, res) => {
+  try {
+    const userEmail = req.user?.email?.toLowerCase();
+    if (!userEmail) {
+      res.status(400).json({ error: "User email not found in token" });
+      return;
+    }
+
+    const snapshot = await collections.resaleProperties
+      .where("submittedBy", "==", userEmail)
+      .orderBy("created_at", "desc")
+      .get();
+
+    const results = snapshot.docs.map(mapResaleDoc);
+    res.json({ resaleProperties: results });
+  } catch (error: any) {
+    console.error("Error fetching user resale properties:", error);
+    res.status(500).json({ error: "Failed to fetch your resale properties" });
+  }
+});
+
+// Public: single Listed resale property by ID (no auth required)
+app.get("/resale/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const doc = await collections.resaleProperties.doc(id).get().catch((error) => {
+      if (isPermissionDeniedError(error)) return null;
+      throw error;
+    });
+
+    if (!doc || !doc.exists) {
+      res.status(404).json({ error: "Resale property not found" });
+      return;
+    }
+
+    const mapped = mapResaleDoc(doc as FirebaseFirestore.QueryDocumentSnapshot);
+    if (mapped.status !== "Listed") {
+      res.status(404).json({ error: "Resale property not found" });
+      return;
+    }
+
+    res.json({ resaleProperty: mapped });
+  } catch (error: any) {
+    console.error("Error fetching resale property:", error);
+    res.status(500).json({ error: "Failed to fetch resale property" });
+  }
+});
+
+// Authenticated: client (or any role) submits a resale property → status Pending
+app.post("/resale", requireAuth, async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      price,
+      propertyType,
+      city,
+      location,
+      mapLink,
+      area,
+      bedrooms,
+      bathrooms,
+      floor,
+      totalFloors,
+      amenities,
+      possession,
+      images,
+    } = req.body;
+
+    if (!title || typeof title !== "string") {
+      res.status(400).json({ error: "title is required" });
+      return;
+    }
+    if (!propertyType || !ALLOWED_RESALE_PROPERTY_TYPES.has(propertyType)) {
+      res.status(400).json({
+        error: `propertyType must be one of: ${[...ALLOWED_RESALE_PROPERTY_TYPES].join(", ")}`,
+      });
+      return;
+    }
+    if (typeof price !== "number" || price < 0) {
+      res.status(400).json({ error: "price must be a non-negative number" });
+      return;
+    }
+    if (!city || typeof city !== "string") {
+      res.status(400).json({ error: "city is required" });
+      return;
+    }
+
+    const docRef = collections.resaleProperties.doc();
+    await docRef.set({
+      id: docRef.id,
+      title,
+      description: description ?? "",
+      price,
+      propertyType,
+      city,
+      location: location ?? city,
+      mapLink: mapLink ?? null,
+      area: area ?? "",
+      bedrooms: bedrooms ?? null,
+      bathrooms: bathrooms ?? null,
+      floor: floor ?? null,
+      totalFloors: totalFloors ?? null,
+      amenities: amenities ?? [],
+      possession: possession ?? null,
+      images: images ?? [],
+      submittedBy: req.user!.email?.toLowerCase() ?? "",
+      submittedByUid: req.user!.uid,
+      submittedByRole: req.user!.role ?? "client",
+      status: "Pending",
+      remarks: null,
+      approvedBy: null,
+      approvedAt: null,
+      created_at: FieldValue.serverTimestamp(),
+      updated_at: FieldValue.serverTimestamp(),
+    });
+
+    res.status(201).json({ success: true, id: docRef.id });
+  } catch (error: any) {
+    console.error("Error submitting resale property:", error);
+    res.status(500).json({ error: "Failed to submit resale property" });
+  }
+});
+
+// Admin: list all resale properties with optional filters
+app.get("/admin/resale", ...requireAdmin, async (req, res) => {
+  try {
+    const { status, city, email } = req.query as Record<string, string>;
+
+    let query: FirebaseFirestore.Query = collections.resaleProperties.orderBy(
+      "created_at",
+      "desc"
+    );
+
+    if (status) {
+      query = query.where("status", "==", status);
+    }
+    if (city) {
+      query = query.where("city", "==", city);
+    }
+    if (email) {
+      query = query.where("submittedBy", "==", email.toLowerCase());
+    }
+
+    const snapshot = await query.get();
+    const results = snapshot.docs.map(mapResaleDoc);
+    res.json({ resaleProperties: results });
+  } catch (error: any) {
+    console.error("Error fetching admin resale properties:", error);
+    res.status(500).json({ error: "Failed to fetch resale properties" });
+  }
+});
+
+// Admin: directly create a Listed resale property (bypasses approval)
+app.post("/admin/resale", ...requireAdmin, async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      price,
+      propertyType,
+      city,
+      location,
+      mapLink,
+      area,
+      bedrooms,
+      bathrooms,
+      floor,
+      totalFloors,
+      amenities,
+      possession,
+      images,
+    } = req.body;
+
+    if (!title || typeof title !== "string") {
+      res.status(400).json({ error: "title is required" });
+      return;
+    }
+    if (!propertyType || !ALLOWED_RESALE_PROPERTY_TYPES.has(propertyType)) {
+      res.status(400).json({
+        error: `propertyType must be one of: ${[...ALLOWED_RESALE_PROPERTY_TYPES].join(", ")}`,
+      });
+      return;
+    }
+    if (typeof price !== "number" || price < 0) {
+      res.status(400).json({ error: "price must be a non-negative number" });
+      return;
+    }
+    if (!city || typeof city !== "string") {
+      res.status(400).json({ error: "city is required" });
+      return;
+    }
+
+    const docRef = collections.resaleProperties.doc();
+    const adminEmail = req.user!.email?.toLowerCase() ?? "";
+    await docRef.set({
+      id: docRef.id,
+      title,
+      description: description ?? "",
+      price,
+      propertyType,
+      city,
+      location: location ?? city,
+      mapLink: mapLink ?? null,
+      area: area ?? "",
+      bedrooms: bedrooms ?? null,
+      bathrooms: bathrooms ?? null,
+      floor: floor ?? null,
+      totalFloors: totalFloors ?? null,
+      amenities: amenities ?? [],
+      possession: possession ?? null,
+      images: images ?? [],
+      submittedBy: adminEmail,
+      submittedByUid: req.user!.uid,
+      submittedByRole: req.user!.role ?? "admin",
+      status: "Listed",
+      remarks: null,
+      approvedBy: adminEmail,
+      approvedAt: FieldValue.serverTimestamp(),
+      created_at: FieldValue.serverTimestamp(),
+      updated_at: FieldValue.serverTimestamp(),
+    });
+
+    res.status(201).json({ success: true, id: docRef.id });
+  } catch (error: any) {
+    console.error("Error creating admin resale property:", error);
+    res.status(500).json({ error: "Failed to create resale property" });
+  }
+});
+
+// Admin: approve or reject a resale property
+app.patch("/admin/resale/:id/status", ...requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, remarks } = req.body;
+
+    const allowedStatuses = ["Approved", "Rejected", "Listed"];
+    if (!status || !allowedStatuses.includes(status)) {
+      res.status(400).json({
+        error: `status must be one of: ${allowedStatuses.join(", ")}`,
+      });
+      return;
+    }
+
+    const docRef = collections.resaleProperties.doc(id);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      res.status(404).json({ error: "Resale property not found" });
+      return;
+    }
+
+    const updateData: Record<string, any> = {
+      status,
+      remarks: remarks ?? null,
+      updated_at: FieldValue.serverTimestamp(),
+    };
+
+    // When approving, mark as Listed and record who approved
+    if (status === "Approved" || status === "Listed") {
+      updateData.status = "Listed";
+      updateData.approvedBy = req.user!.email?.toLowerCase() ?? "";
+      updateData.approvedAt = FieldValue.serverTimestamp();
+    }
+
+    await docRef.update(updateData);
+    res.json({ success: true, id, status: updateData.status });
+  } catch (error: any) {
+    console.error("Error updating resale property status:", error);
+    res.status(500).json({ error: "Failed to update resale property status" });
+  }
+});
+
+// Admin: update resale property details
+app.patch("/admin/resale/:id", ...requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const docRef = collections.resaleProperties.doc(id);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      res.status(404).json({ error: "Resale property not found" });
+      return;
+    }
+
+    const allowedFields = [
+      "title",
+      "description",
+      "price",
+      "propertyType",
+      "city",
+      "location",
+      "mapLink",
+      "area",
+      "bedrooms",
+      "bathrooms",
+      "floor",
+      "totalFloors",
+      "amenities",
+      "possession",
+      "images",
+    ];
+
+    const updates: Record<string, any> = { updated_at: FieldValue.serverTimestamp() };
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
+
+    if (
+      updates.propertyType &&
+      !ALLOWED_RESALE_PROPERTY_TYPES.has(updates.propertyType)
+    ) {
+      res.status(400).json({
+        error: `propertyType must be one of: ${[...ALLOWED_RESALE_PROPERTY_TYPES].join(", ")}`,
+      });
+      return;
+    }
+
+    await docRef.update(updates);
+    res.json({ success: true, id });
+  } catch (error: any) {
+    console.error("Error updating resale property:", error);
+    res.status(500).json({ error: "Failed to update resale property" });
+  }
+});
+
+// Super Admin: hard delete a resale property
+app.delete(
+  "/admin/resale/:id",
+  requireAuth,
+  requireRole("super_admin"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const docRef = collections.resaleProperties.doc(id);
+      const doc = await docRef.get();
+      if (!doc.exists) {
+        res.status(404).json({ error: "Resale property not found" });
+        return;
+      }
+
+      await docRef.delete();
+      res.json({ success: true, id });
+    } catch (error: any) {
+      console.error("Error deleting resale property:", error);
+      res.status(500).json({ error: "Failed to delete resale property" });
     }
   }
 );
