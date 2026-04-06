@@ -37,9 +37,16 @@ service cloud.firestore {
 
     // ── Users ────────────────────────────────────────────────────────
     match /users/{userId} {
+      // Any signed-in user can read their own profile (needed for role sync)
       allow read: if isSuperAdmin()
         || (isSignedIn() && request.auth.uid == userId);
-      allow write: if isSuperAdmin();
+      // Users can update their own demographics; only super_admin can change role/status
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSuperAdmin()
+        || (isSignedIn() && request.auth.uid == userId
+            && !request.resource.data.diff(resource.data).affectedKeys()
+               .hasAny(['role', 'status']));
+      allow delete: if isSuperAdmin();
     }
 
     // ── Projects ─────────────────────────────────────────────────────
