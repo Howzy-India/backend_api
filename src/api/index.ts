@@ -1847,6 +1847,75 @@ const ALLOWED_RESALE_PROPERTY_TYPES = new Set([
   "Commercial",
 ]);
 
+const RESALE_EDITABLE_FIELDS = [
+  "title", "description", "price", "propertyType", "city", "location",
+  "mapLink", "area", "bedrooms", "bathrooms", "floor", "totalFloors",
+  "amenities", "possession", "images",
+] as const;
+
+type ResaleBody = {
+  title?: string;
+  description?: string;
+  price?: number;
+  propertyType?: string;
+  city?: string;
+  location?: string;
+  mapLink?: string;
+  area?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  floor?: number;
+  totalFloors?: number;
+  amenities?: string[];
+  possession?: string;
+  images?: string[];
+};
+
+function validateResaleBody(
+  body: ResaleBody,
+  res: import("express").Response
+): boolean {
+  if (!body.title || typeof body.title !== "string") {
+    res.status(400).json({ error: "title is required" });
+    return false;
+  }
+  if (!body.propertyType || !ALLOWED_RESALE_PROPERTY_TYPES.has(body.propertyType)) {
+    res.status(400).json({
+      error: `propertyType must be one of: ${[...ALLOWED_RESALE_PROPERTY_TYPES].join(", ")}`,
+    });
+    return false;
+  }
+  if (typeof body.price !== "number" || body.price < 0) {
+    res.status(400).json({ error: "price must be a non-negative number" });
+    return false;
+  }
+  if (!body.city || typeof body.city !== "string") {
+    res.status(400).json({ error: "city is required" });
+    return false;
+  }
+  return true;
+}
+
+function buildResaleFields(body: ResaleBody) {
+  return {
+    title: body.title!,
+    description: body.description ?? "",
+    price: body.price!,
+    propertyType: body.propertyType!,
+    city: body.city!,
+    location: body.location ?? body.city!,
+    mapLink: body.mapLink ?? null,
+    area: body.area ?? "",
+    bedrooms: body.bedrooms ?? null,
+    bathrooms: body.bathrooms ?? null,
+    floor: body.floor ?? null,
+    totalFloors: body.totalFloors ?? null,
+    amenities: body.amenities ?? [],
+    possession: body.possession ?? null,
+    images: body.images ?? [],
+  };
+}
+
 // Public: list all Listed resale properties (no auth required)
 app.get("/resale", async (req, res) => {
   try {
@@ -1887,9 +1956,10 @@ app.get("/resale", async (req, res) => {
     res.json({ resaleProperties: results });
   } catch (error: any) {
     console.error("Error fetching resale properties:", error);
-    res
-      .status(500)
-      .json({ error: "Failed to fetch resale properties", detail: error?.message ?? String(error) });
+    res.status(500).json({
+      error: "Failed to fetch resale properties",
+      detail: error?.message ?? String(error),
+    });
   }
 });
 
@@ -1920,12 +1990,15 @@ app.get("/resale/mine", requireAuth, async (req, res) => {
 app.get("/resale/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const doc = await collections.resaleProperties.doc(id).get().catch((error) => {
-      if (isPermissionDeniedError(error)) return null;
-      throw error;
-    });
+    const doc = await collections.resaleProperties
+      .doc(id)
+      .get()
+      .catch((error) => {
+        if (isPermissionDeniedError(error)) return null;
+        throw error;
+      });
 
-    if (!doc || !doc.exists) {
+    if (!doc?.exists) {
       res.status(404).json({ error: "Resale property not found" });
       return;
     }
@@ -1946,64 +2019,15 @@ app.get("/resale/:id", async (req, res) => {
 // Authenticated: client (or any role) submits a resale property → status Pending
 app.post("/resale", requireAuth, async (req, res) => {
   try {
-    const {
-      title,
-      description,
-      price,
-      propertyType,
-      city,
-      location,
-      mapLink,
-      area,
-      bedrooms,
-      bathrooms,
-      floor,
-      totalFloors,
-      amenities,
-      possession,
-      images,
-    } = req.body;
-
-    if (!title || typeof title !== "string") {
-      res.status(400).json({ error: "title is required" });
-      return;
-    }
-    if (!propertyType || !ALLOWED_RESALE_PROPERTY_TYPES.has(propertyType)) {
-      res.status(400).json({
-        error: `propertyType must be one of: ${[...ALLOWED_RESALE_PROPERTY_TYPES].join(", ")}`,
-      });
-      return;
-    }
-    if (typeof price !== "number" || price < 0) {
-      res.status(400).json({ error: "price must be a non-negative number" });
-      return;
-    }
-    if (!city || typeof city !== "string") {
-      res.status(400).json({ error: "city is required" });
-      return;
-    }
+    if (!validateResaleBody(req.body, res)) return;
 
     const docRef = collections.resaleProperties.doc();
     await docRef.set({
       id: docRef.id,
-      title,
-      description: description ?? "",
-      price,
-      propertyType,
-      city,
-      location: location ?? city,
-      mapLink: mapLink ?? null,
-      area: area ?? "",
-      bedrooms: bedrooms ?? null,
-      bathrooms: bathrooms ?? null,
-      floor: floor ?? null,
-      totalFloors: totalFloors ?? null,
-      amenities: amenities ?? [],
-      possession: possession ?? null,
-      images: images ?? [],
-      submittedBy: req.user!.email?.toLowerCase() ?? "",
-      submittedByUid: req.user!.uid,
-      submittedByRole: req.user!.role ?? "client",
+      ...buildResaleFields(req.body),
+      submittedBy: req.user?.email?.toLowerCase() ?? "",
+      submittedByUid: req.user?.uid ?? "",
+      submittedByRole: req.user?.role ?? "client",
       status: "Pending",
       remarks: null,
       approvedBy: null,
@@ -2029,19 +2053,12 @@ app.get("/admin/resale", ...requireAdmin, async (req, res) => {
       "desc"
     );
 
-    if (status) {
-      query = query.where("status", "==", status);
-    }
-    if (city) {
-      query = query.where("city", "==", city);
-    }
-    if (email) {
-      query = query.where("submittedBy", "==", email.toLowerCase());
-    }
+    if (status) query = query.where("status", "==", status);
+    if (city) query = query.where("city", "==", city);
+    if (email) query = query.where("submittedBy", "==", email.toLowerCase());
 
     const snapshot = await query.get();
-    const results = snapshot.docs.map(mapResaleDoc);
-    res.json({ resaleProperties: results });
+    res.json({ resaleProperties: snapshot.docs.map(mapResaleDoc) });
   } catch (error: any) {
     console.error("Error fetching admin resale properties:", error);
     res.status(500).json({ error: "Failed to fetch resale properties" });
@@ -2051,65 +2068,16 @@ app.get("/admin/resale", ...requireAdmin, async (req, res) => {
 // Admin: directly create a Listed resale property (bypasses approval)
 app.post("/admin/resale", ...requireAdmin, async (req, res) => {
   try {
-    const {
-      title,
-      description,
-      price,
-      propertyType,
-      city,
-      location,
-      mapLink,
-      area,
-      bedrooms,
-      bathrooms,
-      floor,
-      totalFloors,
-      amenities,
-      possession,
-      images,
-    } = req.body;
+    if (!validateResaleBody(req.body, res)) return;
 
-    if (!title || typeof title !== "string") {
-      res.status(400).json({ error: "title is required" });
-      return;
-    }
-    if (!propertyType || !ALLOWED_RESALE_PROPERTY_TYPES.has(propertyType)) {
-      res.status(400).json({
-        error: `propertyType must be one of: ${[...ALLOWED_RESALE_PROPERTY_TYPES].join(", ")}`,
-      });
-      return;
-    }
-    if (typeof price !== "number" || price < 0) {
-      res.status(400).json({ error: "price must be a non-negative number" });
-      return;
-    }
-    if (!city || typeof city !== "string") {
-      res.status(400).json({ error: "city is required" });
-      return;
-    }
-
+    const adminEmail = req.user?.email?.toLowerCase() ?? "";
     const docRef = collections.resaleProperties.doc();
-    const adminEmail = req.user!.email?.toLowerCase() ?? "";
     await docRef.set({
       id: docRef.id,
-      title,
-      description: description ?? "",
-      price,
-      propertyType,
-      city,
-      location: location ?? city,
-      mapLink: mapLink ?? null,
-      area: area ?? "",
-      bedrooms: bedrooms ?? null,
-      bathrooms: bathrooms ?? null,
-      floor: floor ?? null,
-      totalFloors: totalFloors ?? null,
-      amenities: amenities ?? [],
-      possession: possession ?? null,
-      images: images ?? [],
+      ...buildResaleFields(req.body),
       submittedBy: adminEmail,
-      submittedByUid: req.user!.uid,
-      submittedByRole: req.user!.role ?? "admin",
+      submittedByUid: req.user?.uid ?? "",
+      submittedByRole: req.user?.role ?? "admin",
       status: "Listed",
       remarks: null,
       approvedBy: adminEmail,
@@ -2152,10 +2120,9 @@ app.patch("/admin/resale/:id/status", ...requireAdmin, async (req, res) => {
       updated_at: FieldValue.serverTimestamp(),
     };
 
-    // When approving, mark as Listed and record who approved
     if (status === "Approved" || status === "Listed") {
       updateData.status = "Listed";
-      updateData.approvedBy = req.user!.email?.toLowerCase() ?? "";
+      updateData.approvedBy = req.user?.email?.toLowerCase() ?? "";
       updateData.approvedAt = FieldValue.serverTimestamp();
     }
 
@@ -2179,35 +2146,12 @@ app.patch("/admin/resale/:id", ...requireAdmin, async (req, res) => {
       return;
     }
 
-    const allowedFields = [
-      "title",
-      "description",
-      "price",
-      "propertyType",
-      "city",
-      "location",
-      "mapLink",
-      "area",
-      "bedrooms",
-      "bathrooms",
-      "floor",
-      "totalFloors",
-      "amenities",
-      "possession",
-      "images",
-    ];
-
     const updates: Record<string, any> = { updated_at: FieldValue.serverTimestamp() };
-    for (const field of allowedFields) {
-      if (req.body[field] !== undefined) {
-        updates[field] = req.body[field];
-      }
+    for (const field of RESALE_EDITABLE_FIELDS) {
+      if (req.body[field] !== undefined) updates[field] = req.body[field];
     }
 
-    if (
-      updates.propertyType &&
-      !ALLOWED_RESALE_PROPERTY_TYPES.has(updates.propertyType)
-    ) {
+    if (updates.propertyType && !ALLOWED_RESALE_PROPERTY_TYPES.has(updates.propertyType)) {
       res.status(400).json({
         error: `propertyType must be one of: ${[...ALLOWED_RESALE_PROPERTY_TYPES].join(", ")}`,
       });
@@ -2246,7 +2190,6 @@ app.delete(
     }
   }
 );
-
 // ── Export as Cloud Function ─────────────────────────────────────────
 
 export const api = onRequest({ serviceAccount: "howzy-api@appspot.gserviceaccount.com" }, app);
