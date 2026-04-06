@@ -122,6 +122,15 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // ── Client Profiles ──────────────────────────────────────────────
+    match /client_profiles/{uid} {
+      // A client can read/write only their own profile; admins can read all
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+      allow delete: if isSuperAdmin();
+    }
+
     // ── Audit Logs ───────────────────────────────────────────────────
     match /auditLogs/{logId} {
       allow read: if isSuperAdmin();
