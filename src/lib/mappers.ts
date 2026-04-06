@@ -91,6 +91,39 @@ export const submissionToProperty = (
   };
 };
 
+export const mapResaleDoc = (
+  doc: FirebaseFirestore.QueryDocumentSnapshot
+) => {
+  const data = doc.data() || {};
+  return {
+    id: doc.id,
+    title: (data.title ?? "") as string,
+    description: (data.description ?? "") as string,
+    price: (data.price ?? 0) as number,
+    propertyType: (data.propertyType ?? "") as string,
+    city: (data.city ?? "") as string,
+    location: (data.location ?? "") as string,
+    mapLink: (data.mapLink ?? null) as string | null,
+    area: (data.area ?? "") as string,
+    bedrooms: (data.bedrooms ?? null) as number | null,
+    bathrooms: (data.bathrooms ?? null) as number | null,
+    floor: (data.floor ?? null) as number | null,
+    totalFloors: (data.totalFloors ?? null) as number | null,
+    amenities: (data.amenities ?? []) as string[],
+    possession: (data.possession ?? null) as string | null,
+    images: (data.images ?? []) as string[],
+    submittedBy: (data.submittedBy ?? "") as string,
+    submittedByUid: (data.submittedByUid ?? "") as string,
+    submittedByRole: (data.submittedByRole ?? "client") as string,
+    status: (data.status ?? "Pending") as string,
+    remarks: (data.remarks ?? null) as string | null,
+    approvedBy: (data.approvedBy ?? null) as string | null,
+    approvedAt: toISODate(data.approvedAt),
+    createdAt: toISODate(data.created_at ?? data.createdAt),
+    updatedAt: toISODate(data.updated_at ?? data.updatedAt),
+  };
+};
+
 export const mapLeadDoc = (doc: FirebaseFirestore.QueryDocumentSnapshot) => {
   const data = doc.data() || {};
   const locationPreferred =

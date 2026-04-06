@@ -6,7 +6,7 @@ if (!admin.apps.length) {
 
 export const db = admin.firestore();
 export const auth = admin.auth();
-export const storage = admin.storage();
+export const storage: admin.storage.Storage = admin.storage();
 export const FieldValue = admin.firestore.FieldValue;
 export const Timestamp = admin.firestore.Timestamp;
 
@@ -24,4 +24,5 @@ export const collections = {
   auditLogs: db.collection("auditLogs"),
   attendance: db.collection("attendance"),
   locationLogs: db.collection("location_logs"),
+  resaleProperties: db.collection("resale_properties"),
 };
