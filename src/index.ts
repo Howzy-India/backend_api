@@ -15,5 +15,7 @@ export {
 
 export { bootstrapSuperAdmin } from "./functions/bootstrap";
 
+export { syncUserRole, seedUserRole } from "./functions/auth";
+
 // ── HTTP API (Express on Cloud Functions) ────────────────────────────
 export { api } from "./api/index";
