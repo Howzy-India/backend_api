@@ -1224,10 +1224,51 @@ app.get("/admin/client-logins", ...requireAdmin, async (_req, res) => {
       .catch(() => collections.clientLogins.get())
       .catch(() => null);
     const logins = snapshot ? snapshot.docs.map(mapLoginDoc) : [];
-    res.json({ logins });
+
+    // Enrich login records with user names from client_profiles (by phone)
+    const phones = [...new Set(logins.map((l) => l.phone).filter(Boolean))] as string[];
+    const nameByPhone: Record<string, string> = {};
+    for (let i = 0; i < phones.length; i += 10) {
+      const chunk = phones.slice(i, i + 10);
+      const profileSnap = await db
+        .collection("client_profiles")
+        .where("phone", "in", chunk)
+        .get()
+        .catch(() => null);
+      if (profileSnap) {
+        profileSnap.docs.forEach((d) => {
+          const data = d.data();
+          if (data.phone) nameByPhone[data.phone] = data.name ?? "";
+        });
+      }
+    }
+    const enriched = logins.map((l) => ({
+      ...l,
+      name: l.phone ? (nameByPhone[l.phone] ?? null) : null,
+    }));
+    res.json({ logins: enriched });
   } catch (error) {
     console.error("Error fetching client logins:", error);
     res.json({ logins: [] });
+  }
+});
+
+app.delete("/admin/clients/:uid", ...requireAdmin, async (req, res) => {
+  if (req.user?.role !== "super_admin") {
+    res.status(403).json({ error: "Only super admins can delete users" });
+    return;
+  }
+  const { uid } = req.params;
+  try {
+    await Promise.all([
+      auth.deleteUser(uid).catch(() => null),
+      db.collection("users").doc(uid).delete().catch(() => null),
+      db.collection("client_profiles").doc(uid).delete().catch(() => null),
+    ]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting client:", error);
+    res.status(500).json({ error: "Failed to delete user" });
   }
 });
 
