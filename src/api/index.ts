@@ -2276,6 +2276,25 @@ app.delete(
 
 const MAX_MESSAGES_PER_SESSION = 50;
 
+/** Fetch a chat session and verify the requesting user owns it. */
+async function getChatSessionForUser(
+  sessionId: string,
+  uid: string
+): Promise<
+  | { session: ReturnType<typeof serializeChatSession>; error?: never }
+  | { session?: never; error: { status: number; message: string } }
+> {
+  const doc = await collections.chatSessions.doc(sessionId).get();
+  if (!doc.exists) {
+    return { error: { status: 404, message: "Session not found" } };
+  }
+  const session = serializeChatSession(doc);
+  if (session.user_id !== uid) {
+    return { error: { status: 403, message: "Access denied" } };
+  }
+  return { session };
+}
+
 // POST /chat/sessions — create a new chat session
 app.post(
   "/chat/sessions",
@@ -2359,21 +2378,13 @@ app.get(
   async (req, res) => {
     try {
       const uid = req.user!.uid;
-      const { id } = req.params;
-
-      const doc = await collections.chatSessions.doc(id).get();
-      if (!doc.exists) {
-        res.status(404).json({ error: "Session not found" });
+      const result = await getChatSessionForUser(req.params.id, uid);
+      if (result.error) {
+        res.status(result.error.status).json({ error: result.error.message });
         return;
       }
 
-      const session = serializeChatSession(doc);
-      if (session.user_id !== uid) {
-        res.status(403).json({ error: "Access denied" });
-        return;
-      }
-
-      res.json({ session });
+      res.json({ session: result.session });
     } catch (error: any) {
       console.error("Error fetching chat session:", error);
       res.status(500).json({ error: "Failed to fetch chat session" });
@@ -2389,21 +2400,13 @@ app.delete(
   async (req, res) => {
     try {
       const uid = req.user!.uid;
-      const { id } = req.params;
-
-      const doc = await collections.chatSessions.doc(id).get();
-      if (!doc.exists) {
-        res.status(404).json({ error: "Session not found" });
+      const result = await getChatSessionForUser(req.params.id, uid);
+      if (result.error) {
+        res.status(result.error.status).json({ error: result.error.message });
         return;
       }
 
-      const session = serializeChatSession(doc);
-      if (session.user_id !== uid) {
-        res.status(403).json({ error: "Access denied" });
-        return;
-      }
-
-      await collections.chatSessions.doc(id).delete();
+      await collections.chatSessions.doc(req.params.id).delete();
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting chat session:", error);
@@ -2432,17 +2435,12 @@ app.post(
         return;
       }
 
-      const sessionDoc = await collections.chatSessions.doc(id).get();
-      if (!sessionDoc.exists) {
-        res.status(404).json({ error: "Session not found" });
+      const sessionResult = await getChatSessionForUser(id, uid);
+      if (sessionResult.error) {
+        res.status(sessionResult.error.status).json({ error: sessionResult.error.message });
         return;
       }
-
-      const session = serializeChatSession(sessionDoc);
-      if (session.user_id !== uid) {
-        res.status(403).json({ error: "Access denied" });
-        return;
-      }
+      const session = sessionResult.session;
 
       if (session.messages.length >= MAX_MESSAGES_PER_SESSION) {
         res.status(429).json({
