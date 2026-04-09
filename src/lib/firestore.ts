@@ -25,4 +25,5 @@ export const collections = {
   attendance: db.collection("attendance"),
   locationLogs: db.collection("location_logs"),
   resaleProperties: db.collection("resale_properties"),
+  chatSessions: db.collection("chat_sessions"),
 };
