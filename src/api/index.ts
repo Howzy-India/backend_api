@@ -2339,7 +2339,7 @@ app.get(
           message_count: s.messages.length,
           enquiry_count: s.enquiry_ids.length,
           // Include only the last message as preview
-          last_message: s.messages[s.messages.length - 1] ?? null,
+          last_message: s.messages.at(-1) ?? null,
         };
       });
 
