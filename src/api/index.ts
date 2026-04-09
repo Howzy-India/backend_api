@@ -2501,4 +2501,10 @@ app.post(
 
 // ── Export as Cloud Function ─────────────────────────────────────────
 
-export const api = onRequest({ serviceAccount: "howzy-api@appspot.gserviceaccount.com" }, app);
+export const api = onRequest(
+  {
+    serviceAccount: "howzy-api@appspot.gserviceaccount.com",
+    secrets: ["GEMINI_API_KEY"],
+  },
+  app
+);
