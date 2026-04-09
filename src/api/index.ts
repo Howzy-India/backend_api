@@ -23,6 +23,11 @@ import {
   toISODate,
 } from "../lib/helpers";
 import { requireAuth, requireAdmin, requireRole } from "../middleware/auth";
+import {
+  processMessage,
+  serializeChatSession,
+  ChatMessage,
+} from "../lib/chatAgent";
 
 const ALLOWED_ORIGINS = [
   "https://howzy-web.web.app",
@@ -2264,6 +2269,236 @@ app.delete(
     }
   }
 );
+// ─────────────────────────────────────────────────────────────────────────────
+// CHAT AGENT ENDPOINTS
+// All endpoints require authentication. Only clients may create/use sessions.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MAX_MESSAGES_PER_SESSION = 50;
+
+// POST /chat/sessions — create a new chat session
+app.post(
+  "/chat/sessions",
+  requireAuth,
+  requireRole("client"),
+  async (req, res) => {
+    try {
+      const uid = req.user!.uid;
+      const email = req.user!.email ?? "";
+
+      // Fetch user profile for name/phone
+      let userName = req.user!.name ?? email;
+      let userPhone = "";
+      const userDoc = await collections.users.doc(uid).get().catch(() => null);
+      if (userDoc?.exists) {
+        const ud = userDoc.data() || {};
+        userName = ud.name ?? ud.displayName ?? userName;
+        userPhone = ud.phone ?? ud.phoneNumber ?? "";
+      }
+
+      const ref = collections.chatSessions.doc();
+      await ref.set({
+        id: ref.id,
+        user_id: uid,
+        user_name: userName,
+        user_phone: userPhone,
+        created_at: FieldValue.serverTimestamp(),
+        updated_at: FieldValue.serverTimestamp(),
+        messages: [],
+        enquiry_ids: [],
+      });
+
+      res.status(201).json({ session_id: ref.id });
+    } catch (error: any) {
+      console.error("Error creating chat session:", error);
+      res.status(500).json({ error: "Failed to create chat session" });
+    }
+  }
+);
+
+// GET /chat/sessions — list the authenticated client's sessions
+app.get(
+  "/chat/sessions",
+  requireAuth,
+  requireRole("client"),
+  async (req, res) => {
+    try {
+      const uid = req.user!.uid;
+      const snap = await collections.chatSessions
+        .where("user_id", "==", uid)
+        .orderBy("updated_at", "desc")
+        .limit(20)
+        .get();
+
+      const sessions = snap.docs.map((doc) => {
+        const s = serializeChatSession(doc);
+        return {
+          id: s.id,
+          created_at: s.created_at,
+          updated_at: s.updated_at,
+          message_count: s.messages.length,
+          enquiry_count: s.enquiry_ids.length,
+          // Include only the last message as preview
+          last_message: s.messages[s.messages.length - 1] ?? null,
+        };
+      });
+
+      res.json({ sessions });
+    } catch (error: any) {
+      console.error("Error fetching chat sessions:", error);
+      res.status(500).json({ error: "Failed to fetch chat sessions" });
+    }
+  }
+);
+
+// GET /chat/sessions/:id — get a session with full message history
+app.get(
+  "/chat/sessions/:id",
+  requireAuth,
+  requireRole("client"),
+  async (req, res) => {
+    try {
+      const uid = req.user!.uid;
+      const { id } = req.params;
+
+      const doc = await collections.chatSessions.doc(id).get();
+      if (!doc.exists) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+      }
+
+      const session = serializeChatSession(doc);
+      if (session.user_id !== uid) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      res.json({ session });
+    } catch (error: any) {
+      console.error("Error fetching chat session:", error);
+      res.status(500).json({ error: "Failed to fetch chat session" });
+    }
+  }
+);
+
+// DELETE /chat/sessions/:id — delete a session
+app.delete(
+  "/chat/sessions/:id",
+  requireAuth,
+  requireRole("client"),
+  async (req, res) => {
+    try {
+      const uid = req.user!.uid;
+      const { id } = req.params;
+
+      const doc = await collections.chatSessions.doc(id).get();
+      if (!doc.exists) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+      }
+
+      const session = serializeChatSession(doc);
+      if (session.user_id !== uid) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      await collections.chatSessions.doc(id).delete();
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting chat session:", error);
+      res.status(500).json({ error: "Failed to delete chat session" });
+    }
+  }
+);
+
+// POST /chat/sessions/:id/message — send a message and get AI reply
+app.post(
+  "/chat/sessions/:id/message",
+  requireAuth,
+  requireRole("client"),
+  async (req, res) => {
+    try {
+      const uid = req.user!.uid;
+      const { id } = req.params;
+      const { message } = req.body as { message?: string };
+
+      if (!message || typeof message !== "string" || message.trim() === "") {
+        res.status(400).json({ error: "message is required" });
+        return;
+      }
+      if (message.length > 2000) {
+        res.status(400).json({ error: "message too long (max 2000 characters)" });
+        return;
+      }
+
+      const sessionDoc = await collections.chatSessions.doc(id).get();
+      if (!sessionDoc.exists) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+      }
+
+      const session = serializeChatSession(sessionDoc);
+      if (session.user_id !== uid) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      if (session.messages.length >= MAX_MESSAGES_PER_SESSION) {
+        res.status(429).json({
+          error: "Session message limit reached. Please start a new session.",
+        });
+        return;
+      }
+
+      // Gather user info for enquiry creation
+      let userName = session.user_name || req.user!.name || req.user!.email || "";
+      let userPhone = session.user_phone || "";
+      const userEmail = req.user!.email ?? "";
+
+      const userMsg: ChatMessage = {
+        role: "user",
+        content: message.trim(),
+        timestamp: new Date().toISOString(),
+      };
+
+      // Process with Gemini
+      const aiResult = await processMessage(id, message.trim(), {
+        uid,
+        name: userName,
+        phone: userPhone,
+        email: userEmail,
+      }, session.messages);
+
+      const aiMsg: ChatMessage = {
+        role: "model",
+        content: aiResult.reply,
+        timestamp: new Date().toISOString(),
+        tool_results: aiResult.tool_results,
+      };
+
+      // Persist both messages atomically
+      await collections.chatSessions.doc(id).update({
+        messages: FieldValue.arrayUnion(userMsg, aiMsg),
+        updated_at: FieldValue.serverTimestamp(),
+      });
+
+      res.json({
+        reply: aiResult.reply,
+        tool_results: aiResult.tool_results ?? null,
+      });
+    } catch (error: any) {
+      console.error("Error processing chat message:", error);
+      // Avoid leaking internal error details
+      if (error?.message === "GEMINI_API_KEY is not configured") {
+        res.status(503).json({ error: "AI service is not configured" });
+      } else {
+        res.status(500).json({ error: "Failed to process message" });
+      }
+    }
+  }
+);
+
 // ── Export as Cloud Function ─────────────────────────────────────────
 
 export const api = onRequest({ serviceAccount: "howzy-api@appspot.gserviceaccount.com" }, app);
