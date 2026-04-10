@@ -2512,7 +2512,7 @@ app.post(
         role: "model",
         content: aiResult.reply,
         timestamp: new Date().toISOString(),
-        tool_results: aiResult.tool_results,
+        ...(aiResult.tool_results ? { tool_results: aiResult.tool_results } : {}),
       };
 
       // Build session update: persist messages + any contact info collected this turn
