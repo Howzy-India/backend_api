@@ -2333,6 +2333,53 @@ async function getChatSessionForUser(
   return { session };
 }
 
+// ─── Neural TTS voice map ──────────────────────────────────────────────────────
+const TTS_VOICES: Record<string, { name: string; ssmlGender: string }> = {
+  "en-IN": { name: "en-IN-Neural2-A", ssmlGender: "FEMALE" },
+  "hi-IN": { name: "hi-IN-Neural2-A", ssmlGender: "FEMALE" },
+  "ta-IN": { name: "ta-IN-Neural2-A", ssmlGender: "FEMALE" },
+  "te-IN": { name: "te-IN-Standard-A", ssmlGender: "FEMALE" },
+  "kn-IN": { name: "kn-IN-Wavenet-A",  ssmlGender: "FEMALE" },
+};
+
+// POST /chat/tts — convert text to speech using Google Cloud TTS Neural2 (no auth required)
+app.post("/chat/tts", async (req, res) => {
+  try {
+    const { text, languageCode = "en-IN" } = req.body as { text?: string; languageCode?: string };
+    if (!text || typeof text !== "string" || !text.trim()) {
+      res.status(400).json({ error: "text is required" });
+      return;
+    }
+    const voice = TTS_VOICES[languageCode] ?? TTS_VOICES["en-IN"];
+
+    const credential = (await import("firebase-admin/app")).getApp().options.credential!;
+    const { access_token: accessToken } = await credential.getAccessToken();
+
+    const ttsRes = await fetch("https://texttospeech.googleapis.com/v1/text:synthesize", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        input: { text: text.slice(0, 4500) },
+        voice: { languageCode, name: voice.name, ssmlGender: voice.ssmlGender },
+        audioConfig: { audioEncoding: "MP3", speakingRate: 1.0, pitch: 0.0 },
+      }),
+    });
+
+    if (!ttsRes.ok) {
+      const errText = await ttsRes.text();
+      console.error("Google TTS error:", errText);
+      res.status(502).json({ error: "TTS generation failed" });
+      return;
+    }
+
+    const data = await ttsRes.json() as { audioContent: string };
+    res.json({ audioContent: data.audioContent });
+  } catch (error: any) {
+    console.error("Error in TTS endpoint:", error?.message ?? error);
+    res.status(500).json({ error: "TTS generation failed" });
+  }
+});
+
 // POST /chat/sessions — create a new chat session (no auth required)
 app.post(
   "/chat/sessions",
