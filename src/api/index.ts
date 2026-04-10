@@ -22,7 +22,7 @@ import {
   formatCurrency,
   toISODate,
 } from "../lib/helpers";
-import { requireAuth, requireAdmin, requireRole } from "../middleware/auth";
+import { requireAuth, requireAdmin, requireRole, optionalAuth } from "../middleware/auth";
 import {
   processMessage,
   serializeChatSession,
@@ -2276,10 +2276,14 @@ app.delete(
 
 const MAX_MESSAGES_PER_SESSION = 50;
 
-/** Fetch a chat session and verify the requesting user owns it. */
+/**
+ * Fetch a chat session. For anonymous sessions (user_id === null) any caller
+ * who knows the session ID may access it. For authenticated sessions the
+ * provided uid must match.
+ */
 async function getChatSessionForUser(
   sessionId: string,
-  uid: string
+  uid: string | null
 ): Promise<
   | { session: ReturnType<typeof serializeChatSession>; error?: never }
   | { session?: never; error: { status: number; message: string } }
@@ -2289,30 +2293,32 @@ async function getChatSessionForUser(
     return { error: { status: 404, message: "Session not found" } };
   }
   const session = serializeChatSession(doc);
-  if (session.user_id !== uid) {
+  // Anonymous sessions are accessible by session ID alone
+  if (session.user_id !== null && session.user_id !== uid) {
     return { error: { status: 403, message: "Access denied" } };
   }
   return { session };
 }
 
-// POST /chat/sessions — create a new chat session
+// POST /chat/sessions — create a new chat session (no auth required)
 app.post(
   "/chat/sessions",
-  requireAuth,
-  requireRole("client"),
+  optionalAuth,
   async (req, res) => {
     try {
-      const uid = req.user!.uid;
-      const email = req.user!.email ?? "";
+      const uid = req.user?.uid ?? null;
+      const email = req.user?.email ?? "";
 
-      // Fetch user profile for name/phone
-      let userName = req.user!.name ?? email;
+      // Fetch profile for authenticated users
+      let userName = "";
       let userPhone = "";
-      const userDoc = await collections.users.doc(uid).get().catch(() => null);
-      if (userDoc?.exists) {
-        const ud = userDoc.data() || {};
-        userName = ud.name ?? ud.displayName ?? userName;
-        userPhone = ud.phone ?? ud.phoneNumber ?? "";
+      if (uid) {
+        const userDoc = await collections.users.doc(uid).get().catch(() => null);
+        if (userDoc?.exists) {
+          const ud = userDoc.data() || {};
+          userName = ud.name ?? ud.displayName ?? "";
+          userPhone = ud.phone ?? ud.phoneNumber ?? "";
+        }
       }
 
       const ref = collections.chatSessions.doc();
@@ -2320,6 +2326,7 @@ app.post(
         id: ref.id,
         user_id: uid,
         user_name: userName,
+        user_email: email,
         user_phone: userPhone,
         created_at: FieldValue.serverTimestamp(),
         updated_at: FieldValue.serverTimestamp(),
@@ -2415,14 +2422,13 @@ app.delete(
   }
 );
 
-// POST /chat/sessions/:id/message — send a message and get AI reply
+// POST /chat/sessions/:id/message — send a message and get AI reply (no auth required)
 app.post(
   "/chat/sessions/:id/message",
-  requireAuth,
-  requireRole("client"),
+  optionalAuth,
   async (req, res) => {
     try {
-      const uid = req.user!.uid;
+      const uid = req.user?.uid ?? null;
       const { id } = req.params;
       const { message } = req.body as { message?: string };
 
@@ -2449,10 +2455,10 @@ app.post(
         return;
       }
 
-      // Gather user info for enquiry creation
-      let userName = session.user_name || req.user!.name || req.user!.email || "";
-      let userPhone = session.user_phone || "";
-      const userEmail = req.user!.email ?? "";
+      // Gather user info for enquiry creation (AI collects these via conversation)
+      const userName = session.user_name || req.user?.name || req.user?.email || "";
+      const userPhone = session.user_phone || "";
+      const userEmail = req.user?.email ?? session.user_email ?? "";
 
       const userMsg: ChatMessage = {
         role: "user",
@@ -2462,7 +2468,7 @@ app.post(
 
       // Process with Gemini
       const aiResult = await processMessage(id, message.trim(), {
-        uid,
+        uid: uid ?? "",
         name: userName,
         phone: userPhone,
         email: userEmail,

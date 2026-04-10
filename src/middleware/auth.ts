@@ -59,3 +59,30 @@ export const requireAdmin = [
   requireAuth,
   requireRole("admin", "super_admin"),
 ];
+
+/**
+ * Optional auth — if a Bearer token is present, verify it and attach the user
+ * to `req.user`. If no token is provided, continue as anonymous (req.user
+ * remains undefined). Never returns 401.
+ */
+export const optionalAuth = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    const idToken = authHeader.split("Bearer ")[1];
+    try {
+      const decoded = await admin.auth().verifyIdToken(idToken);
+      req.user = {
+        uid: decoded.uid,
+        email: decoded.email,
+        role: decoded.role as string | undefined,
+      };
+    } catch {
+      // Invalid token — treat as anonymous
+    }
+  }
+  next();
+};
