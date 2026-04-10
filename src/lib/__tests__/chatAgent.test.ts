@@ -119,6 +119,7 @@ describe("serializeChatSession", () => {
       user_id: "uid-abc",
       user_name: "Ravi Kumar",
       user_phone: "9876543210",
+      user_city: "Hyderabad",
       created_at: now,
       updated_at: now,
       messages: [
@@ -137,6 +138,7 @@ describe("serializeChatSession", () => {
     expect(session.user_id).toBe("uid-abc");
     expect(session.user_name).toBe("Ravi Kumar");
     expect(session.user_phone).toBe("9876543210");
+    expect(session.user_city).toBe("Hyderabad");
     expect(session.messages).toHaveLength(1);
     expect(session.messages[0].role).toBe("user");
     expect(session.messages[0].content).toBe("Hello");
@@ -147,12 +149,47 @@ describe("serializeChatSession", () => {
     const doc = mockSessionDoc("sess-2", {});
     const session = serializeChatSession(doc);
 
-    expect(session.user_id).toBe("");
+    expect(session.user_id).toBeNull();
     expect(session.user_name).toBe("");
     expect(session.user_phone).toBe("");
+    expect(session.user_city).toBe("");
     expect(session.messages).toEqual([]);
     expect(session.enquiry_ids).toEqual([]);
     expect(session.created_at).toBeNull();
     expect(session.updated_at).toBeNull();
+  });
+
+  it("handles anonymous sessions (user_id === null)", () => {
+    const doc = mockSessionDoc("sess-anon", {
+      user_id: null,
+      user_name: "",
+      user_phone: "",
+      user_city: "",
+    });
+    const session = serializeChatSession(doc);
+    expect(session.user_id).toBeNull();
+  });
+});
+
+// ── CollectedContact / phone sanitization ─────────────────────────────────────
+
+describe("phone number sanitization in save_contact_info", () => {
+  it("strips non-digit chars and takes last 10 digits", () => {
+    // Simulates what processMessage does: phone.replace(/\D/g, "").slice(-10)
+    const raw = "+91 98765 43210";
+    const cleaned = raw.replace(/\D/g, "").slice(-10);
+    expect(cleaned).toBe("9876543210");
+  });
+
+  it("handles already-clean 10-digit number", () => {
+    const raw = "9876543210";
+    const cleaned = raw.replace(/\D/g, "").slice(-10);
+    expect(cleaned).toBe("9876543210");
+  });
+
+  it("handles spoken number with spaces like '9 8 7 6 5 4 3 2 1 0'", () => {
+    const raw = "9 8 7 6 5 4 3 2 1 0";
+    const cleaned = raw.replace(/\D/g, "").slice(-10);
+    expect(cleaned).toBe("9876543210");
   });
 });

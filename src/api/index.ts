@@ -2328,6 +2328,7 @@ app.post(
         user_name: userName,
         user_email: email,
         user_phone: userPhone,
+        user_city: "",
         created_at: FieldValue.serverTimestamp(),
         updated_at: FieldValue.serverTimestamp(),
         messages: [],
@@ -2481,11 +2482,19 @@ app.post(
         tool_results: aiResult.tool_results,
       };
 
-      // Persist both messages atomically
-      await collections.chatSessions.doc(id).update({
+      // Build session update: persist messages + any contact info collected this turn
+      const sessionUpdate: Record<string, unknown> = {
         messages: FieldValue.arrayUnion(userMsg, aiMsg),
         updated_at: FieldValue.serverTimestamp(),
-      });
+      };
+      if (aiResult.collected_contact) {
+        const c = aiResult.collected_contact;
+        if (c.name && !session.user_name) sessionUpdate.user_name = c.name;
+        if (c.phone && !session.user_phone) sessionUpdate.user_phone = c.phone;
+        if (c.city && !session.user_city) sessionUpdate.user_city = c.city;
+        if (c.email && !session.user_email) sessionUpdate.user_email = c.email;
+      }
+      await collections.chatSessions.doc(id).update(sessionUpdate);
 
       res.json({
         reply: aiResult.reply,
