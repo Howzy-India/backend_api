@@ -2501,10 +2501,14 @@ app.post(
         tool_results: aiResult.tool_results ?? null,
       });
     } catch (error: any) {
-      console.error("Error processing chat message:", error);
-      // Avoid leaking internal error details
+      console.error("Error processing chat message:", error?.message ?? error);
+      // Surface specific known errors; keep generic message for all others
       if (error?.message === "GEMINI_API_KEY is not configured") {
         res.status(503).json({ error: "AI service is not configured" });
+      } else if (error?.status === 429 || error?.message?.includes("429") || error?.message?.includes("quota")) {
+        res.status(503).json({ error: "AI service is temporarily busy. Please try again in a moment." });
+      } else if (error?.status === 400 || error?.message?.includes("400")) {
+        res.status(500).json({ error: "Failed to process message", detail: error?.message });
       } else {
         res.status(500).json({ error: "Failed to process message" });
       }
