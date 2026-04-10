@@ -2276,6 +2276,39 @@ app.delete(
 
 const MAX_MESSAGES_PER_SESSION = 50;
 
+/** Build the Firestore update payload, merging newly-collected contact fields. */
+function buildSessionUpdate(
+  userMsg: ChatMessage,
+  aiMsg: ChatMessage,
+  aiResult: import("../lib/chatAgent").ProcessMessageResult,
+  session: ReturnType<typeof serializeChatSession>
+): Record<string, unknown> {
+  const update: Record<string, unknown> = {
+    messages: FieldValue.arrayUnion(userMsg, aiMsg),
+    updated_at: FieldValue.serverTimestamp(),
+  };
+  const c = aiResult.collected_contact;
+  if (c) {
+    if (c.name && !session.user_name) update.user_name = c.name;
+    if (c.phone && !session.user_phone) update.user_phone = c.phone;
+    if (c.city && !session.user_city) update.user_city = c.city;
+    if (c.email && !session.user_email) update.user_email = c.email;
+  }
+  return update;
+}
+
+/** Map Gemini / internal errors to an appropriate HTTP response. */
+function handleChatError(error: any, res: import("express").Response): void {
+  console.error("Error processing chat message:", error?.message ?? error);
+  if (error?.message === "GEMINI_API_KEY is not configured") {
+    res.status(503).json({ error: "AI service is not configured" });
+  } else if (error?.status === 429 || error?.message?.includes("429") || error?.message?.includes("quota")) {
+    res.status(503).json({ error: "AI service is temporarily busy. Please try again in a moment." });
+  } else {
+    res.status(500).json({ error: "Failed to process message" });
+  }
+}
+
 /**
  * Fetch a chat session. For anonymous sessions (user_id === null) any caller
  * who knows the session ID may access it. For authenticated sessions the
@@ -2483,17 +2516,7 @@ app.post(
       };
 
       // Build session update: persist messages + any contact info collected this turn
-      const sessionUpdate: Record<string, unknown> = {
-        messages: FieldValue.arrayUnion(userMsg, aiMsg),
-        updated_at: FieldValue.serverTimestamp(),
-      };
-      if (aiResult.collected_contact) {
-        const c = aiResult.collected_contact;
-        if (c.name && !session.user_name) sessionUpdate.user_name = c.name;
-        if (c.phone && !session.user_phone) sessionUpdate.user_phone = c.phone;
-        if (c.city && !session.user_city) sessionUpdate.user_city = c.city;
-        if (c.email && !session.user_email) sessionUpdate.user_email = c.email;
-      }
+      const sessionUpdate = buildSessionUpdate(userMsg, aiMsg, aiResult, session);
       await collections.chatSessions.doc(id).update(sessionUpdate);
 
       res.json({
@@ -2501,17 +2524,7 @@ app.post(
         tool_results: aiResult.tool_results ?? null,
       });
     } catch (error: any) {
-      console.error("Error processing chat message:", error?.message ?? error);
-      // Surface specific known errors; keep generic message for all others
-      if (error?.message === "GEMINI_API_KEY is not configured") {
-        res.status(503).json({ error: "AI service is not configured" });
-      } else if (error?.status === 429 || error?.message?.includes("429") || error?.message?.includes("quota")) {
-        res.status(503).json({ error: "AI service is temporarily busy. Please try again in a moment." });
-      } else if (error?.status === 400 || error?.message?.includes("400")) {
-        res.status(500).json({ error: "Failed to process message", detail: error?.message });
-      } else {
-        res.status(500).json({ error: "Failed to process message" });
-      }
+      handleChatError(error, res);
     }
   }
 );
