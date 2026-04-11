@@ -249,11 +249,11 @@ const handleAdminUserApiError = (
 
 /** Normalize a phone string to E.164, also return raw digits and pendingId. */
 const parsePhone = (phone: unknown): { digits: string; normalizedPhone: string; pendingId: string } | null => {
-  const digits = String(phone ?? "").replace(/\D/g, "");
+  const digits = String(phone ?? "").replaceAll(/\D/g, "");
   if (!digits) return null;
   const normalizedPhone = digits.length === 10 ? `+91${digits}` : `+${digits}`;
   if (!/^\+\d{10,15}$/.test(normalizedPhone)) return null;
-  const pendingId = `pending_${digits.length === 10 ? `91${digits}` : digits}`;
+  const pendingId = digits.length === 10 ? `pending_91${digits}` : `pending_${digits}`;
   return { digits, normalizedPhone, pendingId };
 };
 
@@ -270,6 +270,22 @@ const checkPhoneConflict = async (pendingId: string, normalizedPhone: string): P
     return "A user with this phone number already exists in the system";
   }
   return null;
+};
+
+/** Map a Firestore user document to a standard list-item shape for admin APIs. */
+const toUserListItem = (doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+  const data = doc.data();
+  const isPending = doc.id.startsWith("pending_");
+  return {
+    uid: doc.id,
+    name: data.displayName ?? data.name ?? "",
+    displayName: data.displayName ?? data.name ?? "",
+    email: data.email ?? "",
+    phone: data.phone ?? "",
+    role: data.role ?? "",
+    status: isPending ? "pending" : (data.status ?? "active"),
+    createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
+  };
 };
 
 // ── Health ────────────────────────────────────────────────────────────
@@ -940,20 +956,7 @@ app.get("/admin/partners", ...requireAdmin, async (_req, res) => {
 app.get("/admin/users", requireAuth, requireRole("super_admin"), async (_req, res) => {
   try {
     const snap = await collections.users.where("role", "==", "admin").orderBy("createdAt", "desc").get();
-    const users = snap.docs.map((doc) => {
-      const data = doc.data();
-      const isPending = doc.id.startsWith("pending_");
-      return {
-        uid: doc.id,
-        name: data.displayName ?? data.name ?? "",
-        displayName: data.displayName ?? data.name ?? "",
-        email: data.email ?? "",
-        phone: data.phone ?? "",
-        role: "admin",
-        status: isPending ? "pending" : (data.status ?? "active"),
-        createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
-      };
-    });
+    const users = snap.docs.map(toUserListItem);
     res.json({ users });
   } catch (error) {
     console.error("Error fetching admin users:", error);
@@ -1066,20 +1069,7 @@ app.get("/admin/employees", requireAuth, requireRole("super_admin"), async (_req
       .where("role", "in", [...EMPLOYEE_ROLES])
       .orderBy("createdAt", "desc")
       .get();
-    const employees = snap.docs.map((doc) => {
-      const data = doc.data();
-      const isPending = doc.id.startsWith("pending_");
-      return {
-        uid: doc.id,
-        name: data.displayName ?? data.name ?? "",
-        displayName: data.displayName ?? data.name ?? "",
-        email: data.email ?? "",
-        phone: data.phone ?? "",
-        role: data.role ?? "",
-        status: isPending ? "pending" : (data.status ?? "active"),
-        createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
-      };
-    });
+    const employees = snap.docs.map(toUserListItem);
     res.json({ employees });
   } catch (error) {
     console.error("Error fetching employees:", error);
