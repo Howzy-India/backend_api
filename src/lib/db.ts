@@ -31,6 +31,35 @@ async function getPool(): Promise<Pool> {
     console.error("[db] Idle client error:", err.message);
   });
 
+  // Idempotent migration: rename bhk_count INT → bhk_type TEXT in configurations
+  try {
+    const client = await _pool.connect();
+    try {
+      await client.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'configurations' AND column_name = 'bhk_count'
+          ) THEN
+            ALTER TABLE configurations RENAME COLUMN bhk_count TO bhk_type;
+          END IF;
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'configurations' AND column_name = 'bhk_type'
+              AND data_type = 'integer'
+          ) THEN
+            ALTER TABLE configurations ALTER COLUMN bhk_type TYPE TEXT USING bhk_type::TEXT;
+          END IF;
+        END $$;
+      `);
+    } finally {
+      client.release();
+    }
+  } catch (migErr) {
+    console.error("[db] Migration warning:", migErr);
+  }
+
   return _pool;
 }
 

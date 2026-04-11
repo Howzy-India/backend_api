@@ -1,5 +1,6 @@
 import { toISODate, coerceDetails } from "./helpers";
 import type {
+  BhkType,
   ProjectRow,
   ConfigurationRow,
   ProjectPhotoRow,
@@ -66,7 +67,7 @@ export const mapProjectRow = (
   updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
   configurations: (row.configurations ?? []).map((c) => ({
     id: c.id,
-    bhkType: c.bhk_count,
+    bhkType: c.bhk_type as BhkType,
     minSft: c.min_sft,
     maxSft: c.max_sft,
     unitCount: c.unit_count,

@@ -313,7 +313,7 @@ app.get("/projects", async (req, res) => {
         p.*,
         COALESCE(
           json_agg(DISTINCT jsonb_build_object(
-            'id', c.id, 'bhk_count', c.bhk_count,
+            'id', c.id, 'bhk_type', c.bhk_type,
             'min_sft', c.min_sft, 'max_sft', c.max_sft, 'unit_count', c.unit_count
           )) FILTER (WHERE c.id IS NOT NULL), '[]'
         ) AS configurations,
@@ -361,7 +361,7 @@ app.get("/projects/:id", async (req, res) => {
         p.*,
         COALESCE(
           json_agg(DISTINCT jsonb_build_object(
-            'id', c.id, 'bhk_count', c.bhk_count,
+            'id', c.id, 'bhk_type', c.bhk_type,
             'min_sft', c.min_sft, 'max_sft', c.max_sft, 'unit_count', c.unit_count
           )) FILTER (WHERE c.id IS NOT NULL), '[]'
         ) AS configurations,
@@ -945,14 +945,14 @@ app.post("/admin/users", requireAuth, requireRole("super_admin"), async (req, re
     }
 
     // Normalize phone to E.164 — accept 10-digit Indian numbers or full E.164
-    const digits = String(phone).replace(/\D/g, "");
+    const digits = String(phone).replaceAll(/\D/g, "");
     const normalizedPhone = digits.length === 10 ? `+91${digits}` : `+${digits}`;
     if (!/^\+\d{10,15}$/.test(normalizedPhone)) {
       res.status(400).json({ error: "Invalid phone number format" });
       return;
     }
 
-    const pendingId = `pending_${digits.length === 10 ? `91${digits}` : digits}`;
+    const pendingId = digits.length === 10 ? `pending_91${digits}` : `pending_${digits}`;
 
     // Check if a pending or real user already exists with this phone
     const [pendingSnap, existingFirebaseUser] = await Promise.allSettled([
@@ -995,18 +995,7 @@ app.patch("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (r
     await assertManageableAdminUser(uid);
 
     // Pending users only exist in Firestore — skip Firebase Auth update
-    if (!uid.startsWith("pending_")) {
-      const authUpdate = buildAdminAuthUpdate(req.body ?? {});
-      if (Object.keys(authUpdate).length > 0) {
-        await auth.updateUser(uid, authUpdate);
-      }
-      const firestoreUpdate = buildAdminFirestoreUpdate({
-        authUpdate,
-        status: req.body?.status,
-        updatedBy: req.user?.uid,
-      });
-      await collections.users.doc(uid).set(firestoreUpdate, { merge: true });
-    } else {
+    if (uid.startsWith("pending_")) {
       // For pending users, only update Firestore fields (name, email, status)
       const firestoreUpdate: Record<string, unknown> = {
         updatedAt: FieldValue.serverTimestamp(),
@@ -1017,6 +1006,17 @@ app.patch("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (r
       const email = nonEmpty(req.body?.email);
       if (email) firestoreUpdate.email = email;
       if (isAdminUserStatus(req.body?.status)) firestoreUpdate.status = req.body.status;
+      await collections.users.doc(uid).set(firestoreUpdate, { merge: true });
+    } else {
+      const authUpdate = buildAdminAuthUpdate(req.body ?? {});
+      if (Object.keys(authUpdate).length > 0) {
+        await auth.updateUser(uid, authUpdate);
+      }
+      const firestoreUpdate = buildAdminFirestoreUpdate({
+        authUpdate,
+        status: req.body?.status,
+        updatedBy: req.user?.uid,
+      });
       await collections.users.doc(uid).set(firestoreUpdate, { merge: true });
     }
 
@@ -1117,7 +1117,7 @@ async function fetchProjectById(id: string) {
       p.*,
       COALESCE(
         json_agg(DISTINCT jsonb_build_object(
-          'id', c.id, 'bhk_count', c.bhk_count,
+          'id', c.id, 'bhk_type', c.bhk_type,
           'min_sft', c.min_sft, 'max_sft', c.max_sft, 'unit_count', c.unit_count
         )) FILTER (WHERE c.id IS NOT NULL), '[]'
       ) AS configurations,
@@ -1208,7 +1208,7 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin"), 
       if (body.configurations?.length) {
         for (const cfg of body.configurations) {
           await client.query(
-            `INSERT INTO configurations (project_id, bhk_count, min_sft, max_sft, unit_count)
+            `INSERT INTO configurations (project_id, bhk_type, min_sft, max_sft, unit_count)
              VALUES ($1,$2,$3,$4,$5)`,
             [projectId, cfg.bhkType, cfg.minSft, cfg.maxSft, cfg.unitCount]
           );
@@ -1306,7 +1306,7 @@ app.patch("/admin/properties/:id", requireAuth, requireRole("super_admin", "admi
         await client.query("DELETE FROM configurations WHERE project_id = $1", [projectId]);
         for (const cfg of body.configurations ?? []) {
           await client.query(
-            `INSERT INTO configurations (project_id, bhk_count, min_sft, max_sft, unit_count)
+            `INSERT INTO configurations (project_id, bhk_type, min_sft, max_sft, unit_count)
              VALUES ($1,$2,$3,$4,$5)`,
             [projectId, cfg.bhkType, cfg.minSft, cfg.maxSft, cfg.unitCount]
           );
