@@ -19,6 +19,60 @@ const VALID_ROLES: AppRole[] = [
   "client",
 ];
 
+function toValidRole(raw: unknown): AppRole {
+  return (VALID_ROLES as string[]).includes(raw as string)
+    ? (raw as AppRole)
+    : "client";
+}
+
+async function migratePendingDoc(
+  uid: string,
+  phone: string,
+  firebaseUser: { phoneNumber?: string | null; email?: string | null; displayName?: string | null }
+): Promise<AppRole | null> {
+  const pendingId = `pending_${phone.replaceAll(/\D/g, "")}`;
+  const pendingSnap = await db.collection("users").doc(pendingId).get();
+  if (!pendingSnap.exists) return null;
+
+  const pendingData = pendingSnap.data()!;
+  const role = toValidRole(pendingData.role);
+
+  await db.collection("users").doc(uid).set({
+    ...pendingData,
+    uid,
+    phone: firebaseUser.phoneNumber ?? null,
+    email: firebaseUser.email ?? null,
+    createdAt: pendingData.createdAt ?? FieldValue.serverTimestamp(),
+    lastLoginAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  await db.collection("users").doc(pendingId).delete();
+
+  // Sync name into Firebase Auth displayName so the profile badge shows the real name
+  const pendingName = (pendingData.name as string | undefined) ?? null;
+  if (pendingName && !firebaseUser.displayName) {
+    await auth.updateUser(uid, { displayName: pendingName });
+  }
+
+  return role;
+}
+
+async function registerNewClient(
+  uid: string,
+  firebaseUser: { phoneNumber?: string | null; email?: string | null; displayName?: string | null }
+): Promise<void> {
+  await db.collection("users").doc(uid).set({
+    uid,
+    phone: firebaseUser.phoneNumber ?? null,
+    email: firebaseUser.email ?? null,
+    displayName: firebaseUser.displayName ?? null,
+    role: "client",
+    status: "active",
+    createdAt: FieldValue.serverTimestamp(),
+    lastLoginAt: FieldValue.serverTimestamp(),
+  });
+}
+
 /**
  * Called by the frontend immediately after OTP verification.
  * Reads the user's role from Firestore `users/{uid}`:
@@ -39,65 +93,19 @@ export const syncUserRole = onCall(async (request) => {
   let role: AppRole = "client";
 
   if (snap.exists) {
-    const data = snap.data()!;
-    const rawRole = data.role as string;
-    role = (VALID_ROLES as string[]).includes(rawRole)
-      ? (rawRole as AppRole)
-      : "client";
-
-    // Update last login timestamp
-    await userRef.set(
-      { lastLoginAt: FieldValue.serverTimestamp() },
-      { merge: true }
-    );
+    role = toValidRole(snap.data()!.role);
+    await userRef.set({ lastLoginAt: FieldValue.serverTimestamp() }, { merge: true });
   } else {
-    // Check if there's a pending doc seeded by phone number (pre-seeded admins)
     const phone = firebaseUser.phoneNumber;
-    let migratedFromPending = false;
+    const migratedRole = phone ? await migratePendingDoc(uid, phone, firebaseUser) : null;
 
-    if (phone) {
-      const pendingId = `pending_${phone.replace(/\D/g, "")}`;
-      const pendingSnap = await db.collection("users").doc(pendingId).get();
-
-      if (pendingSnap.exists) {
-        const pendingData = pendingSnap.data()!;
-        const rawRole = pendingData.role as string;
-        role = (VALID_ROLES as string[]).includes(rawRole)
-          ? (rawRole as AppRole)
-          : "client";
-
-        // Migrate: create real UID-keyed doc, delete pending doc
-        await userRef.set({
-          ...pendingData,
-          uid,
-          phone: firebaseUser.phoneNumber ?? null,
-          email: firebaseUser.email ?? null,
-          createdAt: pendingData.createdAt ?? FieldValue.serverTimestamp(),
-          lastLoginAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-        await db.collection("users").doc(pendingId).delete();
-        migratedFromPending = true;
-      }
-    }
-
-    if (!migratedFromPending) {
-      // Brand-new user — register as client
-      role = "client";
-      await userRef.set({
-        uid,
-        phone: firebaseUser.phoneNumber ?? null,
-        email: firebaseUser.email ?? null,
-        displayName: firebaseUser.displayName ?? null,
-        role,
-        status: "active",
-        createdAt: FieldValue.serverTimestamp(),
-        lastLoginAt: FieldValue.serverTimestamp(),
-      });
+    if (migratedRole !== null) {
+      role = migratedRole;
+    } else {
+      await registerNewClient(uid, firebaseUser);
     }
   }
 
-  // Only update custom claims if they differ (saves a token re-issue)
   const current = firebaseUser.customClaims ?? {};
   if (current.role !== role) {
     await auth.setCustomUserClaims(uid, { role });
@@ -148,7 +156,7 @@ export const seedUserRole = onRequest(
       // User hasn't logged in yet — that's fine, claims are set on first syncUserRole call
     }
 
-    const docId = uid ?? `pending_${phone.replace(/\D/g, "")}`;
+    const docId = uid ?? `pending_${phone.replaceAll(/\D/g, "")}`;
     await db
       .collection("users")
       .doc(docId)
@@ -173,3 +181,4 @@ export const seedUserRole = onRequest(
     });
   }
 );
+
