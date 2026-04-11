@@ -1042,6 +1042,138 @@ app.delete("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (
   }
 });
 
+// ── Admin: Howzer Employees (howzer_sourcing / howzer_sales) ──────────
+
+const EMPLOYEE_ROLES = ["howzer_sourcing", "howzer_sales"] as const;
+type EmployeeRole = (typeof EMPLOYEE_ROLES)[number];
+const isEmployeeRole = (v: unknown): v is EmployeeRole =>
+  EMPLOYEE_ROLES.includes(v as EmployeeRole);
+
+app.get("/admin/employees", requireAuth, requireRole("super_admin"), async (_req, res) => {
+  try {
+    const snap = await collections.users
+      .where("role", "in", [...EMPLOYEE_ROLES])
+      .orderBy("createdAt", "desc")
+      .get();
+    const employees = snap.docs.map((doc) => {
+      const data = doc.data();
+      const isPending = doc.id.startsWith("pending_");
+      return {
+        uid: doc.id,
+        name: data.displayName ?? data.name ?? "",
+        displayName: data.displayName ?? data.name ?? "",
+        email: data.email ?? "",
+        phone: data.phone ?? "",
+        role: data.role ?? "",
+        status: isPending ? "pending" : (data.status ?? "active"),
+        createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
+      };
+    });
+    res.json({ employees });
+  } catch (error) {
+    console.error("Error fetching employees:", error);
+    res.status(500).json({ error: "Failed to fetch employees" });
+  }
+});
+
+app.post("/admin/employees", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { name, phone, role } = req.body ?? {};
+    if (!name || !phone) {
+      res.status(400).json({ error: "name and phone are required" });
+      return;
+    }
+    if (!isEmployeeRole(role)) {
+      res.status(400).json({ error: `role must be one of: ${EMPLOYEE_ROLES.join(", ")}` });
+      return;
+    }
+
+    const digits = String(phone).replace(/\D/g, "");
+    const normalizedPhone = digits.length === 10 ? `+91${digits}` : `+${digits}`;
+    if (!/^\+\d{10,15}$/.test(normalizedPhone)) {
+      res.status(400).json({ error: "Invalid phone number format" });
+      return;
+    }
+
+    const pendingId = `pending_${digits.length === 10 ? `91${digits}` : digits}`;
+
+    const [pendingSnap, existingFirebaseUser] = await Promise.allSettled([
+      collections.users.doc(pendingId).get(),
+      auth.getUserByPhoneNumber(normalizedPhone),
+    ]);
+
+    if (pendingSnap.status === "fulfilled" && pendingSnap.value.exists) {
+      res.status(409).json({ error: "An employee with this phone number already exists" });
+      return;
+    }
+    if (existingFirebaseUser.status === "fulfilled") {
+      res.status(409).json({ error: "A user with this phone number already exists in the system" });
+      return;
+    }
+
+    await collections.users.doc(pendingId).set({
+      name: String(name).trim(),
+      displayName: String(name).trim(),
+      phone: normalizedPhone,
+      role,
+      status: "active",
+      createdBy: req.user?.uid,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    res.status(201).json({ success: true, pendingId, phone: normalizedPhone });
+  } catch (error) {
+    console.error("Error creating employee:", error);
+    res.status(500).json({ error: "Failed to create employee" });
+  }
+});
+
+app.patch("/admin/employees/:uid", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const snap = await collections.users.doc(uid).get();
+    if (!snap.exists || !isEmployeeRole(snap.data()?.role)) {
+      res.status(404).json({ error: "Employee not found" });
+      return;
+    }
+
+    const update: Record<string, unknown> = {
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: req.user?.uid,
+    };
+    const name = (req.body?.name ?? req.body?.displayName)?.toString().trim();
+    if (name) { update.name = name; update.displayName = name; }
+    if (isEmployeeRole(req.body?.role)) update.role = req.body.role;
+    if (["active", "disabled"].includes(req.body?.status)) update.status = req.body.status;
+
+    await collections.users.doc(uid).set(update, { merge: true });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error updating employee:", error);
+    res.status(500).json({ error: "Failed to update employee" });
+  }
+});
+
+app.delete("/admin/employees/:uid", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const snap = await collections.users.doc(uid).get();
+    if (!snap.exists || !isEmployeeRole(snap.data()?.role)) {
+      res.status(404).json({ error: "Employee not found" });
+      return;
+    }
+
+    if (!uid.startsWith("pending_")) {
+      await auth.deleteUser(uid);
+    }
+    await collections.users.doc(uid).delete();
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting employee:", error);
+    res.status(500).json({ error: "Failed to delete employee" });
+  }
+});
+
 // ── Admin: Create User With Any Role ─────────────────────────────────
 
 const MANAGEABLE_ROLES = ["admin", "agent", "partner", "client"] as const;
