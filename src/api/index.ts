@@ -31,7 +31,7 @@ import {
 } from "../lib/chatAgent";
 import { query, queryOne, withTransaction } from "../lib/db";
 import { upsertProjectRow } from "../lib/sheetsBackup";
-import type { CreateProjectInput, UpdateProjectInput, ProjectRow, ConfigurationRow, ProjectPhotoRow, ProjectAmenityRow } from "../types/project";
+import type { CreateProjectInput, UpdateProjectInput } from "../types/project";
 
 const ALLOWED_ORIGINS = [
   "https://howzy-web.web.app",
@@ -276,7 +276,7 @@ app.get("/projects", async (req, res) => {
       conditions.push(`p.zone = $${params.length}`);
     }
     if (type) {
-      params.push(type.toUpperCase().replace(/\s+/g, ""));
+      params.push(type.toUpperCase().replaceAll(/\s+/g, ""));
       conditions.push(`p.property_type = $${params.length}`);
     }
     if (location) {
@@ -2542,7 +2542,7 @@ app.post("/chat/tts", async (req, res) => {
       body: JSON.stringify({
         input: { text: text.slice(0, 4500) },
         voice: { languageCode, name: resolvedVoiceName, ssmlGender: defaultVoice.ssmlGender },
-        audioConfig: { audioEncoding: "MP3", speakingRate: 1.0, pitch: 0.0 },
+        audioConfig: { audioEncoding: "MP3", speakingRate: 1, pitch: 0 },
       }),
     });
 
