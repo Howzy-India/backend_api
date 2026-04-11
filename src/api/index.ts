@@ -303,12 +303,12 @@ app.get("/projects", async (req, res) => {
         p.*,
         COALESCE(
           json_agg(DISTINCT jsonb_build_object(
-            'id', c.id, 'bhk_type', c.bhk_type,
+            'id', c.id, 'bhk_count', c.bhk_count,
             'min_sft', c.min_sft, 'max_sft', c.max_sft, 'unit_count', c.unit_count
           )) FILTER (WHERE c.id IS NOT NULL), '[]'
         ) AS configurations,
         COALESCE(
-          json_agg(DISTINCT jsonb_build_object(
+          json_agg(jsonb_build_object(
             'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
           ) ORDER BY ph.display_order) FILTER (WHERE ph.id IS NOT NULL), '[]'
         ) AS photos,
@@ -351,12 +351,12 @@ app.get("/projects/:id", async (req, res) => {
         p.*,
         COALESCE(
           json_agg(DISTINCT jsonb_build_object(
-            'id', c.id, 'bhk_type', c.bhk_type,
+            'id', c.id, 'bhk_count', c.bhk_count,
             'min_sft', c.min_sft, 'max_sft', c.max_sft, 'unit_count', c.unit_count
           )) FILTER (WHERE c.id IS NOT NULL), '[]'
         ) AS configurations,
         COALESCE(
-          json_agg(DISTINCT jsonb_build_object(
+          json_agg(jsonb_build_object(
             'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
           ) ORDER BY ph.display_order) FILTER (WHERE ph.id IS NOT NULL), '[]'
         ) AS photos,
@@ -1067,12 +1067,12 @@ async function fetchProjectById(id: string) {
       p.*,
       COALESCE(
         json_agg(DISTINCT jsonb_build_object(
-          'id', c.id, 'bhk_type', c.bhk_type,
+          'id', c.id, 'bhk_count', c.bhk_count,
           'min_sft', c.min_sft, 'max_sft', c.max_sft, 'unit_count', c.unit_count
         )) FILTER (WHERE c.id IS NOT NULL), '[]'
       ) AS configurations,
       COALESCE(
-        json_agg(DISTINCT jsonb_build_object(
+        json_agg(jsonb_build_object(
           'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
         ) ORDER BY ph.display_order) FILTER (WHERE ph.id IS NOT NULL), '[]'
       ) AS photos,
@@ -1158,7 +1158,7 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin"), 
       if (body.configurations?.length) {
         for (const cfg of body.configurations) {
           await client.query(
-            `INSERT INTO configurations (project_id, bhk_type, min_sft, max_sft, unit_count)
+            `INSERT INTO configurations (project_id, bhk_count, min_sft, max_sft, unit_count)
              VALUES ($1,$2,$3,$4,$5)`,
             [projectId, cfg.bhkType, cfg.minSft, cfg.maxSft, cfg.unitCount]
           );
@@ -1256,7 +1256,7 @@ app.patch("/admin/properties/:id", requireAuth, requireRole("super_admin", "admi
         await client.query("DELETE FROM configurations WHERE project_id = $1", [projectId]);
         for (const cfg of body.configurations ?? []) {
           await client.query(
-            `INSERT INTO configurations (project_id, bhk_type, min_sft, max_sft, unit_count)
+            `INSERT INTO configurations (project_id, bhk_count, min_sft, max_sft, unit_count)
              VALUES ($1,$2,$3,$4,$5)`,
             [projectId, cfg.bhkType, cfg.minSft, cfg.maxSft, cfg.unitCount]
           );
