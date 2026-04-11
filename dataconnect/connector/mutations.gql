@@ -1,0 +1,33 @@
+# All mutations are server-side only (NO_ACCESS from client SDK)
+
+mutation CreateProject($data: Project_Insert!) @auth(level: NO_ACCESS) {
+  project_insert(data: $data)
+}
+
+mutation UpdateProject($id: UUID!, $data: Project_Update!) @auth(level: NO_ACCESS) {
+  project_update(id: $id, data: $data)
+}
+
+mutation SoftDeleteProject($id: UUID!) @auth(level: NO_ACCESS) {
+  project_update(id: $id, data: { status: INACTIVE })
+}
+
+mutation CreateConfiguration($data: Configuration_Insert!) @auth(level: NO_ACCESS) {
+  configuration_insert(data: $data)
+}
+
+mutation DeleteConfigurationsByProject($projectId: UUID!) @auth(level: NO_ACCESS) {
+  configurations_deleteMany(where: { projectId: { eq: $projectId } })
+}
+
+mutation CreateProjectPhoto($data: ProjectPhoto_Insert!) @auth(level: NO_ACCESS) {
+  projectPhoto_insert(data: $data)
+}
+
+mutation CreateProjectAmenity($data: ProjectAmenity_Insert!) @auth(level: NO_ACCESS) {
+  projectAmenity_insert(data: $data)
+}
+
+mutation DeleteAmenitiesByProject($projectId: UUID!) @auth(level: NO_ACCESS) {
+  projectAmenities_deleteMany(where: { projectId: { eq: $projectId } })
+}

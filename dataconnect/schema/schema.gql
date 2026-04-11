@@ -1,0 +1,152 @@
+# Firebase Data Connect Schema — Howzy Projects
+# Backed by Cloud SQL for PostgreSQL
+
+# ── Enums ──────────────────────────────────────────────────────────────────
+enum PropertyType {
+  PROJECT
+  PLOT
+  FARMLAND
+}
+
+enum ProjectSegment {
+  PREMIUM
+  ECONOMY
+  SUPER_LUXURY
+}
+
+enum ProjectType {
+  GATED_SOCIETY
+  SEMI_GATED
+  STAND_ALONE
+  VILLA_COMMUNITY
+  ULTRA_LUXURY
+}
+
+enum PossessionStatus {
+  RTMI
+  UNDER_CONSTRUCTION
+  EOI
+}
+
+enum DensityType {
+  LOW_DENSITY
+  MEDIUM_DENSITY
+  HIGH_DENSITY
+}
+
+enum ProjectZone {
+  WEST
+  EAST
+  SOUTH
+  NORTH
+  CENTRAL
+}
+
+enum ProjectStatus {
+  ACTIVE
+  INACTIVE
+  COMING_SOON
+  PENDING_APPROVAL
+}
+
+# ── projects ────────────────────────────────────────────────────────────────
+# Maps to PostgreSQL table: projects
+type Project @table(name: "projects", singular: "project", plural: "projects") {
+  id: UUID! @default(expr: "uuidV4()")
+
+  # Human-readable unique identifier (auto-generated prefix + timestamp)
+  uniqueId: String! @col(name: "unique_id") @unique
+
+  # ── Identity ──
+  name:          String!
+  developerName: String!  @col(name: "developer_name")
+  reraNumber:    String   @col(name: "rera_number")
+
+  # ── Classification ──
+  propertyType:   PropertyType!   @col(name: "property_type")
+  projectType:    ProjectType     @col(name: "project_type")
+  projectSegment: ProjectSegment  @col(name: "project_segment")
+
+  # ── Possession ──
+  possessionStatus: PossessionStatus @col(name: "possession_status")
+  possessionDate:   String           @col(name: "possession_date")
+
+  # ── Location ──
+  address:  String
+  zone:     ProjectZone
+  location: String   # cluster / neighbourhood
+  area:     String
+  city:     String!
+  state:    String
+  pincode:  String
+  landmark: String
+  mapLink:  String @col(name: "map_link")
+
+  # ── Site Specs ──
+  landParcel:     Float @col(name: "land_parcel")
+  numberOfTowers: Int   @col(name: "number_of_towers")
+  totalUnits:     Int   @col(name: "total_units")
+  availableUnits: Int   @col(name: "available_units")
+  density:        DensityType
+
+  # ── Pricing ──
+  sftCostingPerSqft: Int    @col(name: "sft_costing_per_sqft")
+  emiStartsFrom:     String @col(name: "emi_starts_from")
+  pricingTwoBhk:     Int    @col(name: "pricing_two_bhk")
+  pricingThreeBhk:   Int    @col(name: "pricing_three_bhk")
+  pricingFourBhk:    Int    @col(name: "pricing_four_bhk")
+
+  # ── Media ──
+  videoLink3D:             String @col(name: "video_link_3d")
+  brochureLink:            String @col(name: "brochure_link")
+  onboardingAgreementLink: String @col(name: "onboarding_agreement_link")
+
+  # ── Contacts ──
+  projectManagerName:    String @col(name: "project_manager_name")
+  projectManagerContact: String @col(name: "project_manager_contact")
+  spocName:              String @col(name: "spoc_name")
+  spocContact:           String @col(name: "spoc_contact")
+
+  # ── Marketing ──
+  usp:     String
+  teaser:  String
+  details: String
+
+  # ── Meta ──
+  status:                 ProjectStatus! @default(value: "ACTIVE")
+  leadRegistrationStatus: String         @col(name: "lead_registration_status")
+  createdBy:              String         @col(name: "created_by")
+  updatedBy:              String         @col(name: "updated_by")
+  createdAt:              Timestamp!     @default(expr: "request.time") @col(name: "created_at")
+  updatedAt:              Timestamp      @col(name: "updated_at")
+
+}
+
+# ── configurations ──────────────────────────────────────────────────────────
+# One-to-many: BHK types for a project
+type Configuration @table(name: "configurations") {
+  id:        UUID!    @default(expr: "uuidV4()")
+  projectId: UUID!    @col(name: "project_id")
+  project:   Project! @ref(fields: ["projectId"], references: ["id"])
+  bhkCount:  Int!     @col(name: "bhk_count")
+  minSft:    Int!     @col(name: "min_sft")
+  maxSft:    Int!     @col(name: "max_sft")
+  unitCount: Int!     @col(name: "unit_count")
+}
+
+# ── project_photos ──────────────────────────────────────────────────────────
+type ProjectPhoto @table(name: "project_photos") {
+  id:           UUID!    @default(expr: "uuidV4()")
+  projectId:    UUID!    @col(name: "project_id")
+  project:      Project! @ref(fields: ["projectId"], references: ["id"])
+  url:          String!
+  displayOrder: Int!     @col(name: "display_order") @default(value: 0)
+}
+
+# ── project_amenities ───────────────────────────────────────────────────────
+type ProjectAmenity @table(name: "project_amenities") {
+  id:        UUID!    @default(expr: "uuidV4()")
+  projectId: UUID!    @col(name: "project_id")
+  project:   Project! @ref(fields: ["projectId"], references: ["id"])
+  amenity:   String!
+}

@@ -39,3 +39,9 @@ google-services.json
 GoogleService-Info.plist
 
 test-results/
+# Firebase Data Connect generated output
+dataconnect/.dataconnect/
+dataconnect/example/
+
+# Data Connect emulator data
+dataconnect/.dataconnect/pgliteData/
