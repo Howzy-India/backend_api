@@ -9,6 +9,8 @@ export type AppRole =
   | "admin"
   | "sales_agent"
   | "sourcing_agent"
+  | "howzer_sourcing"
+  | "howzer_sales"
   | "client";
 
 const VALID_ROLES: AppRole[] = [
@@ -16,6 +18,8 @@ const VALID_ROLES: AppRole[] = [
   "admin",
   "sales_agent",
   "sourcing_agent",
+  "howzer_sourcing",
+  "howzer_sales",
   "client",
 ];
 
@@ -99,10 +103,10 @@ export const syncUserRole = onCall(async (request) => {
     const phone = firebaseUser.phoneNumber;
     const migratedRole = phone ? await migratePendingDoc(uid, phone, firebaseUser) : null;
 
-    if (migratedRole !== null) {
-      role = migratedRole;
-    } else {
+    if (migratedRole === null) {
       await registerNewClient(uid, firebaseUser);
+    } else {
+      role = migratedRole;
     }
   }
 

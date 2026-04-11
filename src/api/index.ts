@@ -247,6 +247,84 @@ const handleAdminUserApiError = (
   res.status(500).json({ error: `Failed to ${action}` });
 };
 
+/** Normalize a phone string to E.164, also return raw digits and pendingId. */
+const parsePhone = (phone: unknown): { digits: string; normalizedPhone: string; pendingId: string } | null => {
+  const raw = typeof phone === "string" ? phone : "";
+  const digits = raw.replaceAll(/\D/g, "");
+  if (!digits) return null;
+  const normalizedPhone = digits.length === 10 ? `+91${digits}` : `+${digits}`;
+  if (!/^\+\d{10,15}$/.test(normalizedPhone)) return null;
+  const pendingId = digits.length === 10 ? `pending_91${digits}` : `pending_${digits}`;
+  return { digits, normalizedPhone, pendingId };
+};
+
+/** Check if a phone number already exists (pending doc or Firebase Auth user). */
+const checkPhoneConflict = async (pendingId: string, normalizedPhone: string): Promise<string | null> => {
+  const [pendingSnap, existingFirebaseUser] = await Promise.allSettled([
+    collections.users.doc(pendingId).get(),
+    auth.getUserByPhoneNumber(normalizedPhone),
+  ]);
+  if (pendingSnap.status === "fulfilled" && pendingSnap.value.exists) {
+    return "A user with this phone number already exists";
+  }
+  if (existingFirebaseUser.status === "fulfilled") {
+    return "A user with this phone number already exists in the system";
+  }
+  return null;
+};
+
+/** Map a Firestore user document to a standard list-item shape for admin APIs. */
+const toUserListItem = (doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+  const data = doc.data();
+  const isPending = doc.id.startsWith("pending_");
+  return {
+    uid: doc.id,
+    name: data.displayName ?? data.name ?? "",
+    displayName: data.displayName ?? data.name ?? "",
+    email: data.email ?? "",
+    phone: data.phone ?? "",
+    role: data.role ?? "",
+    status: isPending ? "pending" : (data.status ?? "active"),
+    createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
+  };
+};
+
+/** Validate phone, check conflicts, create a pending user doc, and send 201. Returns false if already responded with an error. */
+const createPendingUser = async (
+  params: { name: unknown; phone: unknown; role: string; email?: unknown; createdBy?: string },
+  res: express.Response
+): Promise<boolean> => {
+  const { name, phone, role, email, createdBy } = params;
+  if (!name || !phone) {
+    res.status(400).json({ error: "name and phone are required" });
+    return false;
+  }
+  const parsed = parsePhone(phone);
+  if (!parsed) {
+    res.status(400).json({ error: "Invalid phone number format" });
+    return false;
+  }
+  const { normalizedPhone, pendingId } = parsed;
+  const conflict = await checkPhoneConflict(pendingId, normalizedPhone);
+  if (conflict) {
+    res.status(409).json({ error: conflict });
+    return false;
+  }
+  const doc: Record<string, unknown> = {
+    name: String(name).trim(),
+    displayName: String(name).trim(),
+    phone: normalizedPhone,
+    role,
+    status: "active",
+    createdBy,
+    createdAt: FieldValue.serverTimestamp(),
+  };
+  if (email) doc.email = String(email).trim();
+  await collections.users.doc(pendingId).set(doc);
+  res.status(201).json({ success: true, pendingId, phone: normalizedPhone });
+  return true;
+};
+
 // ── Health ────────────────────────────────────────────────────────────
 
 app.get("/health", async (_req, res) => {
@@ -915,20 +993,7 @@ app.get("/admin/partners", ...requireAdmin, async (_req, res) => {
 app.get("/admin/users", requireAuth, requireRole("super_admin"), async (_req, res) => {
   try {
     const snap = await collections.users.where("role", "==", "admin").orderBy("createdAt", "desc").get();
-    const users = snap.docs.map((doc) => {
-      const data = doc.data();
-      const isPending = doc.id.startsWith("pending_");
-      return {
-        uid: doc.id,
-        name: data.displayName ?? data.name ?? "",
-        displayName: data.displayName ?? data.name ?? "",
-        email: data.email ?? "",
-        phone: data.phone ?? "",
-        role: "admin",
-        status: isPending ? "pending" : (data.status ?? "active"),
-        createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
-      };
-    });
+    const users = snap.docs.map(toUserListItem);
     res.json({ users });
   } catch (error) {
     console.error("Error fetching admin users:", error);
@@ -939,50 +1004,7 @@ app.get("/admin/users", requireAuth, requireRole("super_admin"), async (_req, re
 app.post("/admin/users", requireAuth, requireRole("super_admin"), async (req, res) => {
   try {
     const { name, phone, email } = req.body ?? {};
-    if (!name || !phone) {
-      res.status(400).json({ error: "name and phone are required" });
-      return;
-    }
-
-    // Normalize phone to E.164 — accept 10-digit Indian numbers or full E.164
-    const digits = String(phone).replaceAll(/\D/g, "");
-    const normalizedPhone = digits.length === 10 ? `+91${digits}` : `+${digits}`;
-    if (!/^\+\d{10,15}$/.test(normalizedPhone)) {
-      res.status(400).json({ error: "Invalid phone number format" });
-      return;
-    }
-
-    const pendingId = digits.length === 10 ? `pending_91${digits}` : `pending_${digits}`;
-
-    // Check if a pending or real user already exists with this phone
-    const [pendingSnap, existingFirebaseUser] = await Promise.allSettled([
-      collections.users.doc(pendingId).get(),
-      auth.getUserByPhoneNumber(normalizedPhone),
-    ]);
-
-    if (
-      pendingSnap.status === "fulfilled" && pendingSnap.value.exists
-    ) {
-      res.status(409).json({ error: "An admin user with this phone number already exists" });
-      return;
-    }
-    if (existingFirebaseUser.status === "fulfilled") {
-      res.status(409).json({ error: "A user with this phone number already exists in the system" });
-      return;
-    }
-
-    await collections.users.doc(pendingId).set({
-      name: String(name).trim(),
-      displayName: String(name).trim(),
-      phone: normalizedPhone,
-      email: email ? String(email).trim() : null,
-      role: "admin",
-      status: "active",
-      createdBy: req.user?.uid,
-      createdAt: FieldValue.serverTimestamp(),
-    });
-
-    res.status(201).json({ success: true, pendingId, phone: normalizedPhone });
+    await createPendingUser({ name, phone, email, role: "admin", createdBy: req.user?.uid }, res);
   } catch (error) {
     console.error("Error creating admin user:", error);
     res.status(500).json({ error: "Failed to create admin user" });
@@ -994,7 +1016,6 @@ app.patch("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (r
     const { uid } = req.params;
     await assertManageableAdminUser(uid);
 
-    // Pending users only exist in Firestore — skip Firebase Auth update
     if (uid.startsWith("pending_")) {
       // For pending users, only update Firestore fields (name, email, status)
       const firestoreUpdate: Record<string, unknown> = {
@@ -1008,6 +1029,7 @@ app.patch("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (r
       if (isAdminUserStatus(req.body?.status)) firestoreUpdate.status = req.body.status;
       await collections.users.doc(uid).set(firestoreUpdate, { merge: true });
     } else {
+      // Real Firebase Auth users — update Auth + Firestore
       const authUpdate = buildAdminAuthUpdate(req.body ?? {});
       if (Object.keys(authUpdate).length > 0) {
         await auth.updateUser(uid, authUpdate);
@@ -1039,6 +1061,87 @@ app.delete("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (
     res.json({ success: true });
   } catch (error) {
     handleAdminUserApiError("deleting admin user", error, res);
+  }
+});
+
+// ── Admin: Howzer Employees (howzer_sourcing / howzer_sales) ──────────
+
+const EMPLOYEE_ROLES = ["howzer_sourcing", "howzer_sales"] as const;
+type EmployeeRole = (typeof EMPLOYEE_ROLES)[number];
+const isEmployeeRole = (v: unknown): v is EmployeeRole =>
+  EMPLOYEE_ROLES.includes(v as EmployeeRole);
+
+app.get("/admin/employees", requireAuth, requireRole("super_admin"), async (_req, res) => {
+  try {
+    const snap = await collections.users
+      .where("role", "in", [...EMPLOYEE_ROLES])
+      .orderBy("createdAt", "desc")
+      .get();
+    const employees = snap.docs.map(toUserListItem);
+    res.json({ employees });
+  } catch (error) {
+    console.error("Error fetching employees:", error);
+    res.status(500).json({ error: "Failed to fetch employees" });
+  }
+});
+
+app.post("/admin/employees", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { name, phone, role } = req.body ?? {};
+    if (!isEmployeeRole(role)) {
+      res.status(400).json({ error: `role must be one of: ${EMPLOYEE_ROLES.join(", ")}` });
+      return;
+    }
+    await createPendingUser({ name, phone, role, createdBy: req.user?.uid }, res);
+  } catch (error) {
+    console.error("Error creating employee:", error);
+    res.status(500).json({ error: "Failed to create employee" });
+  }
+});
+
+app.patch("/admin/employees/:uid", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const snap = await collections.users.doc(uid).get();
+    if (!snap.exists || !isEmployeeRole(snap.data()?.role)) {
+      res.status(404).json({ error: "Employee not found" });
+      return;
+    }
+
+    const update: Record<string, unknown> = {
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: req.user?.uid,
+    };
+    const name = (req.body?.name ?? req.body?.displayName)?.toString().trim();
+    if (name) { update.name = name; update.displayName = name; }
+    if (isEmployeeRole(req.body?.role)) update.role = req.body.role;
+    if (["active", "disabled"].includes(req.body?.status)) update.status = req.body.status;
+
+    await collections.users.doc(uid).set(update, { merge: true });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error updating employee:", error);
+    res.status(500).json({ error: "Failed to update employee" });
+  }
+});
+
+app.delete("/admin/employees/:uid", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const snap = await collections.users.doc(uid).get();
+    if (!snap.exists || !isEmployeeRole(snap.data()?.role)) {
+      res.status(404).json({ error: "Employee not found" });
+      return;
+    }
+
+    if (!uid.startsWith("pending_")) {
+      await auth.deleteUser(uid);
+    }
+    await collections.users.doc(uid).delete();
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting employee:", error);
+    res.status(500).json({ error: "Failed to delete employee" });
   }
 });
 
