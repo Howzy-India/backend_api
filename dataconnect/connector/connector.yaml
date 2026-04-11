@@ -1,0 +1,6 @@
+connectorId: "howzy-connector"
+generate:
+  adminNodeSdk:
+    - outputDir: ../../src/generated/dataconnect
+      package: "@howzy/dataconnect"
+      packageJsonDir: ../..

@@ -7,6 +7,7 @@ import { google } from "googleapis";
 import { collections, FieldValue, db, storage, auth } from "../lib/firestore";
 import {
   mapProjectDoc,
+  mapProjectRow,
   mapSubmissionDoc,
   submissionToProperty,
   mapLeadDoc,
@@ -28,6 +29,9 @@ import {
   serializeChatSession,
   ChatMessage,
 } from "../lib/chatAgent";
+import { query, queryOne, withTransaction } from "../lib/db";
+import { upsertProjectRow } from "../lib/sheetsBackup";
+import type { CreateProjectInput, UpdateProjectInput, ProjectRow, ConfigurationRow, ProjectPhotoRow, ProjectAmenityRow } from "../types/project";
 
 const ALLOWED_ORIGINS = [
   "https://howzy-web.web.app",
@@ -248,85 +252,89 @@ app.get("/health", async (_req, res) => {
 
 app.get("/projects", async (req, res) => {
   try {
-    const { location, type, city, q } = req.query as Record<string, string>;
+    const {
+      location,
+      type,
+      city,
+      zone,
+      q,
+      after,
+      limit: limitStr,
+    } = req.query as Record<string, string>;
 
-    const [projectsSnapshot, submissionsSnapshot] = await Promise.all([
-      collections.projects
-        .orderBy("created_at", "desc")
-        .get()
-        .catch((error) => {
-          if (isPermissionDeniedError(error)) {
-            console.warn(
-              "Projects read denied while fetching public projects. Returning empty projects list."
-            );
-            return null;
-          }
-          return collections.projects.get().catch((fallbackError) => {
-            if (isPermissionDeniedError(fallbackError)) {
-              console.warn(
-                "Projects read denied while fetching public projects. Returning empty projects list."
-              );
-              return null;
-            }
-            throw fallbackError;
-          });
-        }),
-      collections.submissions
-        .where("status", "==", "Approved")
-        .get()
-        .catch((error) => {
-          if (isPermissionDeniedError(error)) {
-            console.warn(
-              "Submissions read denied while fetching public projects. Returning projects only."
-            );
-            return null;
-          }
-          throw error;
-        }),
-    ]);
+    const limit = Math.min(Number(limitStr) || 50, 200);
 
-    const mappedProjects = projectsSnapshot ? projectsSnapshot.docs.map(mapProjectDoc) : [];
-    const mappedSubmissions = submissionsSnapshot
-      ? submissionsSnapshot.docs
-          .map(mapSubmissionDoc)
-          .filter((s) => allowedSubmissionTypes.has(s.type))
-          .map(submissionToProperty)
-      : [];
+    const conditions: string[] = ["p.status != 'INACTIVE'"];
+    const params: unknown[] = [];
 
-    let combined = [...mappedProjects, ...mappedSubmissions].sort((a, b) => {
-      if (!a.createdAt || !b.createdAt) return 0;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-
-    // Apply optional public search/filter params
-    if (q) {
-      const lq = q.toLowerCase();
-      combined = combined.filter(
-        (p) =>
-          p.name?.toLowerCase().includes(lq) ||
-          p.location?.toLowerCase().includes(lq) ||
-          p.city?.toLowerCase().includes(lq) ||
-          p.developerName?.toLowerCase().includes(lq)
-      );
-    }
-    if (location) {
-      const ll = location.toLowerCase();
-      combined = combined.filter(
-        (p) => p.location?.toLowerCase().includes(ll) || p.city?.toLowerCase().includes(ll)
-      );
-    }
     if (city) {
-      combined = combined.filter((p) => p.city?.toLowerCase() === city.toLowerCase());
+      params.push(city);
+      conditions.push(`p.city ILIKE $${params.length}`);
+    }
+    if (zone) {
+      params.push(zone.toUpperCase());
+      conditions.push(`p.zone = $${params.length}`);
     }
     if (type) {
-      combined = combined.filter(
-        (p) =>
-          p.projectType?.toLowerCase() === type.toLowerCase() ||
-          p.propertyType?.toLowerCase() === type.toLowerCase()
+      params.push(type.toUpperCase());
+      conditions.push(`p.property_type = $${params.length}`);
+    }
+    if (location) {
+      params.push(`%${location}%`);
+      conditions.push(`p.location ILIKE $${params.length}`);
+    }
+    if (q) {
+      params.push(q);
+      conditions.push(
+        `to_tsvector('english', p.name || ' ' || p.developer_name || ' ' || COALESCE(p.location,''))
+         @@ plainto_tsquery('english', $${params.length})`
       );
     }
+    if (after) {
+      params.push(after);
+      conditions.push(`p.created_at < (SELECT created_at FROM projects WHERE id = $${params.length})`);
+    }
 
-    res.json({ projects: combined });
+    params.push(limit);
+    const whereClause = conditions.join(" AND ");
+
+    const sql = `
+      SELECT
+        p.*,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object(
+            'id', c.id, 'bhk_type', c.bhk_type,
+            'min_sft', c.min_sft, 'max_sft', c.max_sft, 'unit_count', c.unit_count
+          )) FILTER (WHERE c.id IS NOT NULL), '[]'
+        ) AS configurations,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object(
+            'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
+          ) ORDER BY ph.display_order) FILTER (WHERE ph.id IS NOT NULL), '[]'
+        ) AS photos,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object('id', pa.id, 'amenity', pa.amenity))
+          FILTER (WHERE pa.id IS NOT NULL), '[]'
+        ) AS amenities
+      FROM projects p
+      LEFT JOIN configurations c ON c.project_id = p.id
+      LEFT JOIN project_photos ph ON ph.project_id = p.id
+      LEFT JOIN project_amenities pa ON pa.project_id = p.id
+      WHERE ${whereClause}
+      GROUP BY p.id
+      ORDER BY p.created_at DESC
+      LIMIT $${params.length}
+    `;
+
+    const rows = await query(sql, params);
+    const projects = rows.map((row: any) => mapProjectRow({
+      ...row,
+      configurations: row.configurations ?? [],
+      photos: row.photos ?? [],
+      amenities: row.amenities ?? [],
+    }));
+
+    res.json({ projects, total: projects.length });
   } catch (error: any) {
     console.error("Error fetching projects:", error);
     res.status(500).json({ error: "Failed to fetch projects", detail: error?.message ?? String(error) });
@@ -338,46 +346,45 @@ app.get("/projects/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    const projectDoc = await collections.projects
-      .doc(id)
-      .get()
-      .catch((error) => {
-        if (isPermissionDeniedError(error)) {
-          console.warn(
-            "Projects read denied while fetching single public project. Returning not found."
-          );
-          return null;
-        }
-        throw error;
+    const sql = `
+      SELECT
+        p.*,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object(
+            'id', c.id, 'bhk_type', c.bhk_type,
+            'min_sft', c.min_sft, 'max_sft', c.max_sft, 'unit_count', c.unit_count
+          )) FILTER (WHERE c.id IS NOT NULL), '[]'
+        ) AS configurations,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object(
+            'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
+          ) ORDER BY ph.display_order) FILTER (WHERE ph.id IS NOT NULL), '[]'
+        ) AS photos,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object('id', pa.id, 'amenity', pa.amenity))
+          FILTER (WHERE pa.id IS NOT NULL), '[]'
+        ) AS amenities
+      FROM projects p
+      LEFT JOIN configurations c ON c.project_id = p.id
+      LEFT JOIN project_photos ph ON ph.project_id = p.id
+      LEFT JOIN project_amenities pa ON pa.project_id = p.id
+      WHERE (p.id = $1 OR p.unique_id = $1) AND p.status != 'INACTIVE'
+      GROUP BY p.id
+    `;
+
+    const row: any = await queryOne(sql, [id]);
+
+    if (row) {
+      return res.json({
+        project: mapProjectRow({
+          ...row,
+          configurations: row.configurations ?? [],
+          photos: row.photos ?? [],
+          amenities: row.amenities ?? [],
+        }),
       });
-
-    if (projectDoc?.exists) {
-      return res.json({ project: mapProjectDoc(projectDoc as any) });
     }
 
-    const submissionDoc = await collections.submissions
-      .doc(id)
-      .get()
-      .catch((error) => {
-        if (isPermissionDeniedError(error)) {
-          console.warn(
-            "Submissions read denied while fetching single public project. Returning projects only."
-          );
-          return null;
-        }
-        throw error;
-      });
-
-    if (!submissionDoc) {
-      return res.status(404).json({ error: "Project not found" });
-    }
-
-    if (submissionDoc.exists) {
-      const mapped = mapSubmissionDoc(submissionDoc as any);
-      if (allowedSubmissionTypes.has(mapped.type)) {
-        return res.json({ project: submissionToProperty(mapped) });
-      }
-    }
     return res.status(404).json({ error: "Project not found" });
   } catch (error) {
     console.error("Error fetching project:", error);
@@ -1053,99 +1060,269 @@ type AllowedPropertyType = (typeof ALLOWED_PROPERTY_TYPES)[number];
 const isAllowedPropertyType = (v: unknown): v is AllowedPropertyType =>
   ALLOWED_PROPERTY_TYPES.includes(v as AllowedPropertyType);
 
+// Shared helper: fetch a fully-joined project from Cloud SQL by its UUID
+async function fetchProjectById(id: string) {
+  const sql = `
+    SELECT
+      p.*,
+      COALESCE(
+        json_agg(DISTINCT jsonb_build_object(
+          'id', c.id, 'bhk_type', c.bhk_type,
+          'min_sft', c.min_sft, 'max_sft', c.max_sft, 'unit_count', c.unit_count
+        )) FILTER (WHERE c.id IS NOT NULL), '[]'
+      ) AS configurations,
+      COALESCE(
+        json_agg(DISTINCT jsonb_build_object(
+          'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
+        ) ORDER BY ph.display_order) FILTER (WHERE ph.id IS NOT NULL), '[]'
+      ) AS photos,
+      COALESCE(
+        json_agg(DISTINCT jsonb_build_object('id', pa.id, 'amenity', pa.amenity))
+        FILTER (WHERE pa.id IS NOT NULL), '[]'
+      ) AS amenities
+    FROM projects p
+    LEFT JOIN configurations c ON c.project_id = p.id
+    LEFT JOIN project_photos ph ON ph.project_id = p.id
+    LEFT JOIN project_amenities pa ON pa.project_id = p.id
+    WHERE p.id = $1
+    GROUP BY p.id
+  `;
+  const row: any = await queryOne(sql, [id]);
+  if (!row) return null;
+  return mapProjectRow({
+    ...row,
+    configurations: row.configurations ?? [],
+    photos: row.photos ?? [],
+    amenities: row.amenities ?? [],
+  });
+}
+
 app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin"), async (req, res) => {
   try {
-    const {
-      name,
-      location,
-      developerName,
-      propertyType,
-      projectType,
-      city,
-      reraNumber,
-      status,
-      usp,
-      teaser,
-    } = req.body as Record<string, unknown>;
+    const body = req.body as CreateProjectInput;
 
-    if (!nonEmpty(name)) {
+    if (!body.name || !String(body.name).trim()) {
       return res.status(400).json({ error: "name is required" });
     }
-    if (!isAllowedPropertyType(propertyType)) {
-      return res.status(400).json({
-        error: `propertyType must be one of: ${ALLOWED_PROPERTY_TYPES.join(", ")}`,
-      });
+    if (!body.city || !String(body.city).trim()) {
+      return res.status(400).json({ error: "city is required" });
+    }
+    if (!body.propertyType) {
+      return res.status(400).json({ error: "propertyType is required (PROJECT | PLOT | FARMLAND)" });
     }
 
     const callerRole = req.user?.role;
+    const callerUid = req.user?.uid ?? "";
+    const projectStatus = callerRole === "admin" ? "PENDING_APPROVAL" : (body.status ?? "ACTIVE");
 
-    // admin role: property requires super_admin approval — create as pending submission
-    if (callerRole === "admin") {
-      const submissionTypeMap: Record<string, string> = {
-        project: "Project",
-        plot: "Plot",
-        farmland: "Farm Land",
-      };
-      const submissionType = submissionTypeMap[String(propertyType)] ?? "Project";
-      const docRef = collections.submissions.doc();
-      await docRef.set({
-        id: docRef.id,
-        type: submissionType,
-        name: String(name).trim(),
-        email: req.user?.email ?? "",
-        status: "Pending",
-        details: {
-          location: nonEmpty(location) ?? "",
-          developerName: nonEmpty(developerName) ?? "",
-          projectType: nonEmpty(projectType) ?? "",
-          city: nonEmpty(city) ?? "",
-          reraNumber: nonEmpty(reraNumber) ?? "",
-          usp: nonEmpty(usp) ?? "",
-          teaser: nonEmpty(teaser) ?? "",
-          propertyType: String(propertyType),
-        },
-        created_at: FieldValue.serverTimestamp(),
-      });
-      return res.status(201).json({ id: docRef.id, success: true, pending: true });
-    }
+    // Generate a short unique ID
+    const uniqueId = `PROP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    // super_admin: publish directly to projects collection
-    const docRef = collections.projects.doc();
-    await docRef.set({
-      name: String(name).trim(),
-      location: nonEmpty(location) ?? "",
-      developerName: nonEmpty(developerName) ?? "",
-      propertyType,
-      projectType: nonEmpty(projectType) ?? "",
-      city: nonEmpty(city) ?? "",
-      reraNumber: nonEmpty(reraNumber) ?? "",
-      status: nonEmpty(status) ?? "Listed",
-      usp: nonEmpty(usp) ?? "",
-      teaser: nonEmpty(teaser) ?? "",
-      created_at: FieldValue.serverTimestamp(),
+    const project = await withTransaction(async (client) => {
+      // Insert main project row
+      const insertResult = await client.query(
+        `INSERT INTO projects (
+          unique_id, name, developer_name, rera_number, property_type, project_type,
+          project_segment, possession_status, possession_date, address, zone, location,
+          area, city, state, pincode, landmark, map_link, land_parcel, number_of_towers,
+          total_units, available_units, density, sft_costing_per_sqft, emi_starts_from,
+          pricing_two_bhk, pricing_three_bhk, pricing_four_bhk, video_link_3d, brochure_link,
+          onboarding_agreement_link, project_manager_name, project_manager_contact,
+          spoc_name, spoc_contact, usp, teaser, details, status, lead_registration_status,
+          created_by, updated_by, created_at, updated_at
+        ) VALUES (
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
+          $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,now(),now()
+        ) RETURNING *`,
+        [
+          uniqueId, String(body.name).trim(), body.developerName ?? "",
+          body.reraNumber ?? null, body.propertyType, body.projectType ?? null,
+          body.projectSegment ?? null, body.possessionStatus ?? null, body.possessionDate ?? null,
+          body.address ?? null, body.zone ?? null, body.location ?? null,
+          body.area ?? null, body.city, body.state ?? null,
+          body.pincode ?? null, body.landmark ?? null, body.mapLink ?? null,
+          body.landParcel ?? null, body.numberOfTowers ?? null,
+          body.totalUnits ?? null, body.availableUnits ?? null, body.density ?? null,
+          body.sftCostingPerSqft ?? null, body.emiStartsFrom ?? null,
+          body.pricingTwoBhk ?? null, body.pricingThreeBhk ?? null, body.pricingFourBhk ?? null,
+          body.videoLink3D ?? null, body.brochureLink ?? null,
+          body.onboardingAgreementLink ?? null, body.projectManagerName ?? null,
+          body.projectManagerContact ?? null, body.spocName ?? null, body.spocContact ?? null,
+          body.usp ?? null, body.teaser ?? null, body.details ?? null,
+          projectStatus, null, callerUid, callerUid,
+        ]
+      );
+      const projectId = insertResult.rows[0].id;
+
+      // Insert configurations
+      if (body.configurations?.length) {
+        for (const cfg of body.configurations) {
+          await client.query(
+            `INSERT INTO configurations (project_id, bhk_type, min_sft, max_sft, unit_count)
+             VALUES ($1,$2,$3,$4,$5)`,
+            [projectId, cfg.bhkType, cfg.minSft, cfg.maxSft, cfg.unitCount]
+          );
+        }
+      }
+
+      // Insert photos
+      if (body.photos?.length) {
+        for (let i = 0; i < body.photos.length; i++) {
+          await client.query(
+            `INSERT INTO project_photos (project_id, url, display_order) VALUES ($1,$2,$3)`,
+            [projectId, body.photos[i], i]
+          );
+        }
+      }
+
+      // Insert amenities
+      if (body.amenities?.length) {
+        for (const amenity of body.amenities) {
+          await client.query(
+            `INSERT INTO project_amenities (project_id, amenity)
+             VALUES ($1,$2) ON CONFLICT (project_id, amenity) DO NOTHING`,
+            [projectId, amenity]
+          );
+        }
+      }
+
+      return insertResult.rows[0];
     });
 
-    res.status(201).json({ id: docRef.id, success: true });
+    const fullProject = await fetchProjectById(project.id);
+
+    // Fire-and-forget backup
+    if (fullProject) upsertProjectRow(fullProject).catch(() => {});
+
+    res.status(201).json({ id: project.id, uniqueId, success: true, pending: callerRole === "admin" });
   } catch (error) {
     console.error("Error creating property:", error);
     res.status(500).json({ error: "Failed to create property" });
   }
 });
 
+// Update a project (admin/super_admin)
+app.patch("/admin/properties/:id", requireAuth, requireRole("super_admin", "admin"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const body = req.body as UpdateProjectInput;
+    const callerUid = req.user?.uid ?? "";
+
+    // Verify project exists
+    const existing: any = await queryOne("SELECT id FROM projects WHERE id = $1 OR unique_id = $1", [id]);
+    if (!existing) return res.status(404).json({ error: "Project not found" });
+    const projectId = existing.id;
+
+    await withTransaction(async (client) => {
+      // Build dynamic SET clause for scalar fields
+      const sets: string[] = ["updated_at = now()", "updated_by = $1"];
+      const params: unknown[] = [callerUid];
+
+      const fieldMap: Record<string, string> = {
+        name: "name", developerName: "developer_name", reraNumber: "rera_number",
+        propertyType: "property_type", projectType: "project_type",
+        projectSegment: "project_segment", possessionStatus: "possession_status",
+        possessionDate: "possession_date", address: "address", zone: "zone",
+        location: "location", area: "area", city: "city", state: "state",
+        pincode: "pincode", landmark: "landmark", mapLink: "map_link",
+        landParcel: "land_parcel", numberOfTowers: "number_of_towers",
+        totalUnits: "total_units", availableUnits: "available_units",
+        density: "density", sftCostingPerSqft: "sft_costing_per_sqft",
+        emiStartsFrom: "emi_starts_from", pricingTwoBhk: "pricing_two_bhk",
+        pricingThreeBhk: "pricing_three_bhk", pricingFourBhk: "pricing_four_bhk",
+        videoLink3D: "video_link_3d", brochureLink: "brochure_link",
+        onboardingAgreementLink: "onboarding_agreement_link",
+        projectManagerName: "project_manager_name",
+        projectManagerContact: "project_manager_contact",
+        spocName: "spoc_name", spocContact: "spoc_contact",
+        usp: "usp", teaser: "teaser", details: "details", status: "status",
+      };
+
+      for (const [jsKey, colName] of Object.entries(fieldMap)) {
+        if (jsKey in body && (body as any)[jsKey] !== undefined) {
+          params.push((body as any)[jsKey]);
+          sets.push(`${colName} = $${params.length}`);
+        }
+      }
+
+      params.push(projectId);
+      await client.query(
+        `UPDATE projects SET ${sets.join(", ")} WHERE id = $${params.length}`,
+        params
+      );
+
+      // Replace configurations if provided
+      if (body.configurations !== undefined) {
+        await client.query("DELETE FROM configurations WHERE project_id = $1", [projectId]);
+        for (const cfg of body.configurations ?? []) {
+          await client.query(
+            `INSERT INTO configurations (project_id, bhk_type, min_sft, max_sft, unit_count)
+             VALUES ($1,$2,$3,$4,$5)`,
+            [projectId, cfg.bhkType, cfg.minSft, cfg.maxSft, cfg.unitCount]
+          );
+        }
+      }
+
+      // Append new photos if provided
+      if (body.photos?.length) {
+        const countRes = await client.query(
+          "SELECT COUNT(*) FROM project_photos WHERE project_id = $1",
+          [projectId]
+        );
+        let startOrder = Number(countRes.rows[0].count);
+        for (const url of body.photos) {
+          await client.query(
+            "INSERT INTO project_photos (project_id, url, display_order) VALUES ($1,$2,$3)",
+            [projectId, url, startOrder++]
+          );
+        }
+      }
+
+      // Replace amenities if provided
+      if (body.amenities !== undefined) {
+        await client.query("DELETE FROM project_amenities WHERE project_id = $1", [projectId]);
+        for (const amenity of body.amenities ?? []) {
+          await client.query(
+            `INSERT INTO project_amenities (project_id, amenity)
+             VALUES ($1,$2) ON CONFLICT (project_id, amenity) DO NOTHING`,
+            [projectId, amenity]
+          );
+        }
+      }
+    });
+
+    const updated = await fetchProjectById(projectId);
+    if (updated) upsertProjectRow(updated).catch(() => {});
+
+    res.json({ success: true, project: updated });
+  } catch (error) {
+    console.error("Error updating property:", error);
+    res.status(500).json({ error: "Failed to update property" });
+  }
+});
+
 app.delete("/admin/properties/:id", requireAuth, requireRole("super_admin", "admin"), async (req, res) => {
   try {
     const { id } = req.params;
-    const docRef = collections.projects.doc(id);
-    const docSnap = await docRef.get();
-    if (!docSnap.exists) {
-      return res.status(404).json({ error: "Property not found" });
-    }
-    await docRef.delete();
+    const result = await query(
+      "UPDATE projects SET status = 'INACTIVE', updated_at = now() WHERE id = $1 OR unique_id = $1 RETURNING id",
+      [id]
+    );
+    if (!result.length) return res.status(404).json({ error: "Property not found" });
     res.json({ success: true });
   } catch (error) {
     console.error("Error deleting property:", error);
     res.status(500).json({ error: "Failed to delete property" });
   }
+});
+
+// Super admin: get Google Sheets backup link
+app.get("/admin/settings/backup-sheet", requireAuth, requireRole("super_admin"), async (_req, res) => {
+  const sheetId = process.env.BACKUP_SHEET_ID;
+  if (!sheetId) {
+    return res.status(503).json({ error: "Backup sheet not configured" });
+  }
+  res.json({ sheetUrl: `https://docs.google.com/spreadsheets/d/${sheetId}/edit` });
 });
 
 app.post("/admin/enquiries/:id/assign", ...requireAdmin, async (req, res) => {

@@ -1,0 +1,68 @@
+# Public: list projects with filters and keyset pagination
+query ListProjects(
+  $city:         String
+  $propertyType: PropertyType
+  $zone:         ProjectZone
+  $q:            String
+  $limit:        Int! = 50
+) @auth(level: PUBLIC) {
+  projects(
+    where: {
+      status: { ne: INACTIVE }
+      city:   { eq: $city }
+      propertyType: { eq: $propertyType }
+      zone:   { eq: $zone }
+    }
+    orderBy: [{ createdAt: DESC }]
+    limit:   $limit
+  ) {
+    id uniqueId name developerName city location zone area
+    propertyType projectSegment possessionStatus possessionDate
+    sftCostingPerSqft availableUnits totalUnits status
+    photos(orderBy: [{ displayOrder: ASC }], limit: 1) { url }
+    configurations { bhkType minSft maxSft unitCount }
+    amenities { amenity }
+  }
+}
+
+# Public: full project detail
+query GetProject($id: UUID!) @auth(level: PUBLIC) {
+  project(id: $id) {
+    id uniqueId name developerName reraNumber
+    propertyType projectType projectSegment
+    possessionStatus possessionDate
+    address zone location area city state pincode landmark mapLink
+    landParcel numberOfTowers totalUnits availableUnits density
+    sftCostingPerSqft emiStartsFrom
+    pricingTwoBhk pricingThreeBhk pricingFourBhk
+    videoLink3D brochureLink onboardingAgreementLink
+    projectManagerName projectManagerContact
+    spocName spocContact
+    usp teaser details status leadRegistrationStatus
+    createdAt updatedAt
+    configurations { id bhkType minSft maxSft unitCount }
+    photos(orderBy: [{ displayOrder: ASC }]) { id url displayOrder }
+    amenities { id amenity }
+  }
+}
+
+# Admin: list all projects including pending (server-side only via Admin SDK)
+query ListProjectsAdmin(
+  $status: ProjectStatus
+  $city:   String
+  $limit:  Int! = 100
+) @auth(level: NO_ACCESS) {
+  projects(
+    where: {
+      status: { eq: $status }
+      city:   { eq: $city }
+    }
+    orderBy: [{ createdAt: DESC }]
+    limit:   $limit
+  ) {
+    id uniqueId name developerName city zone status propertyType
+    projectSegment possessionStatus availableUnits totalUnits
+    projectManagerName spocName createdAt updatedAt
+    photos(limit: 1) { url }
+  }
+}

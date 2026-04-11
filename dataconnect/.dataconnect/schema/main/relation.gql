@@ -1,0 +1,1034 @@
+extend type Configuration {
+  """
+  Implicit metadata field that cannot be written. It provides extra information about query results.
+  """
+  _metadata: _Metadata @fdc_generated(from: "Configuration", purpose: METADATA_FIELD)
+  """
+  ✨ Count the number of rows in the `Configuration` table.
+  """
+  _count: Int! @fdc_generated(from: "Configuration.", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Configuration` table where the `bhkCount` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  bhkCount_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Configuration.bhkCount", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Configuration` table where the `id` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  id_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Configuration.id", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Configuration` table where the `maxSft` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  maxSft_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Configuration.maxSft", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Configuration` table where the `minSft` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  minSft_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Configuration.minSft", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Configuration` table where the `projectId` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  projectId_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Configuration.projectId", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Configuration` table where the `unitCount` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  unitCount_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Configuration.unitCount", purpose: QUERY_COUNT)
+  """
+  ✨ Sum the `bhkCount` field in the `Configuration` table.
+  """
+  bhkCount_sum(
+    """
+    Set to true to sum the distinct values.
+    """
+    distinct: Boolean = false
+  ): Int @fdc_generated(from: "Configuration.bhkCount", purpose: QUERY_SUM)
+  """
+  ✨ Sum the `maxSft` field in the `Configuration` table.
+  """
+  maxSft_sum(
+    """
+    Set to true to sum the distinct values.
+    """
+    distinct: Boolean = false
+  ): Int @fdc_generated(from: "Configuration.maxSft", purpose: QUERY_SUM)
+  """
+  ✨ Sum the `minSft` field in the `Configuration` table.
+  """
+  minSft_sum(
+    """
+    Set to true to sum the distinct values.
+    """
+    distinct: Boolean = false
+  ): Int @fdc_generated(from: "Configuration.minSft", purpose: QUERY_SUM)
+  """
+  ✨ Sum the `unitCount` field in the `Configuration` table.
+  """
+  unitCount_sum(
+    """
+    Set to true to sum the distinct values.
+    """
+    distinct: Boolean = false
+  ): Int @fdc_generated(from: "Configuration.unitCount", purpose: QUERY_SUM)
+  """
+  ✨ Average the `bhkCount` field in the `Configuration` table.
+  """
+  bhkCount_avg(
+    """
+    Set to true to average the distinct values.
+    """
+    distinct: Boolean = false
+  ): Float @fdc_generated(from: "Configuration.bhkCount", purpose: QUERY_AVG)
+  """
+  ✨ Average the `maxSft` field in the `Configuration` table.
+  """
+  maxSft_avg(
+    """
+    Set to true to average the distinct values.
+    """
+    distinct: Boolean = false
+  ): Float @fdc_generated(from: "Configuration.maxSft", purpose: QUERY_AVG)
+  """
+  ✨ Average the `minSft` field in the `Configuration` table.
+  """
+  minSft_avg(
+    """
+    Set to true to average the distinct values.
+    """
+    distinct: Boolean = false
+  ): Float @fdc_generated(from: "Configuration.minSft", purpose: QUERY_AVG)
+  """
+  ✨ Average the `unitCount` field in the `Configuration` table.
+  """
+  unitCount_avg(
+    """
+    Set to true to average the distinct values.
+    """
+    distinct: Boolean = false
+  ): Float @fdc_generated(from: "Configuration.unitCount", purpose: QUERY_AVG)
+  """
+  ✨ Minimum of the `bhkCount` field in the `Configuration` table.
+  """
+  bhkCount_min: Int @fdc_generated(from: "Configuration.bhkCount", purpose: QUERY_MIN)
+  """
+  ✨ Minimum of the `maxSft` field in the `Configuration` table.
+  """
+  maxSft_min: Int @fdc_generated(from: "Configuration.maxSft", purpose: QUERY_MIN)
+  """
+  ✨ Minimum of the `minSft` field in the `Configuration` table.
+  """
+  minSft_min: Int @fdc_generated(from: "Configuration.minSft", purpose: QUERY_MIN)
+  """
+  ✨ Minimum of the `unitCount` field in the `Configuration` table.
+  """
+  unitCount_min: Int @fdc_generated(from: "Configuration.unitCount", purpose: QUERY_MIN)
+  """
+  ✨ Maximum of the `bhkCount` field in the `Configuration` table.
+  """
+  bhkCount_max: Int @fdc_generated(from: "Configuration.bhkCount", purpose: QUERY_MAX)
+  """
+  ✨ Maximum of the `maxSft` field in the `Configuration` table.
+  """
+  maxSft_max: Int @fdc_generated(from: "Configuration.maxSft", purpose: QUERY_MAX)
+  """
+  ✨ Maximum of the `minSft` field in the `Configuration` table.
+  """
+  minSft_max: Int @fdc_generated(from: "Configuration.minSft", purpose: QUERY_MAX)
+  """
+  ✨ Maximum of the `unitCount` field in the `Configuration` table.
+  """
+  unitCount_max: Int @fdc_generated(from: "Configuration.unitCount", purpose: QUERY_MAX)
+  """
+  A generated field that is used for caching results in SDKs.
+  """
+  _id: ID! @fdc_generated(from: "Configuration.id", purpose: ENTITY_ID)
+}
+extend type Project {
+  """
+  ✨ List `Configuration` objects in a one-to-many relationship (where `Configuration`.`project` is this object).
+  """
+  configurations_on_project(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Configuration_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Configuration_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Configuration_Having
+  ): [Configuration!]! @fdc_generated(from: "Configuration.project", purpose: QUERY_MULTIPLE_ONE_TO_MANY)
+  """
+  ✨ List `ProjectAmenity` objects in a one-to-many relationship (where `ProjectAmenity`.`project` is this object).
+  """
+  projectAmenities_on_project(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: ProjectAmenity_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [ProjectAmenity_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: ProjectAmenity_Having
+  ): [ProjectAmenity!]! @fdc_generated(from: "ProjectAmenity.project", purpose: QUERY_MULTIPLE_ONE_TO_MANY)
+  """
+  ✨ List `ProjectPhoto` objects in a one-to-many relationship (where `ProjectPhoto`.`project` is this object).
+  """
+  projectPhotos_on_project(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: ProjectPhoto_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [ProjectPhoto_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: ProjectPhoto_Having
+  ): [ProjectPhoto!]! @fdc_generated(from: "ProjectPhoto.project", purpose: QUERY_MULTIPLE_ONE_TO_MANY)
+  """
+  Implicit metadata field that cannot be written. It provides extra information about query results.
+  """
+  _metadata: _Metadata @fdc_generated(from: "Project", purpose: METADATA_FIELD)
+  """
+  ✨ Count the number of rows in the `Project` table.
+  """
+  _count: Int! @fdc_generated(from: "Project.", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `address` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  address_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.address", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `area` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  area_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.area", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `availableUnits` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  availableUnits_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.availableUnits", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `brochureLink` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  brochureLink_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.brochureLink", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `city` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  city_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.city", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `createdAt` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  createdAt_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.createdAt", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `createdBy` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  createdBy_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.createdBy", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `density` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  density_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.density", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `details` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  details_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.details", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `developerName` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  developerName_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.developerName", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `emiStartsFrom` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  emiStartsFrom_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.emiStartsFrom", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `id` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  id_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.id", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `landParcel` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  landParcel_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.landParcel", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `landmark` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  landmark_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.landmark", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `leadRegistrationStatus` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  leadRegistrationStatus_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.leadRegistrationStatus", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `location` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  location_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.location", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `mapLink` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  mapLink_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.mapLink", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `name` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  name_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.name", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `numberOfTowers` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  numberOfTowers_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.numberOfTowers", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `onboardingAgreementLink` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  onboardingAgreementLink_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.onboardingAgreementLink", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `pincode` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  pincode_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.pincode", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `possessionDate` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  possessionDate_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.possessionDate", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `possessionStatus` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  possessionStatus_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.possessionStatus", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `pricingFourBhk` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  pricingFourBhk_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.pricingFourBhk", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `pricingThreeBhk` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  pricingThreeBhk_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.pricingThreeBhk", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `pricingTwoBhk` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  pricingTwoBhk_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.pricingTwoBhk", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `projectManagerContact` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  projectManagerContact_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.projectManagerContact", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `projectManagerName` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  projectManagerName_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.projectManagerName", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `projectSegment` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  projectSegment_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.projectSegment", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `projectType` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  projectType_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.projectType", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `propertyType` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  propertyType_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.propertyType", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `reraNumber` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  reraNumber_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.reraNumber", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `sftCostingPerSqft` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  sftCostingPerSqft_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.sftCostingPerSqft", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `spocContact` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  spocContact_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.spocContact", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `spocName` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  spocName_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.spocName", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `state` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  state_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.state", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `status` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  status_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.status", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `teaser` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  teaser_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.teaser", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `totalUnits` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  totalUnits_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.totalUnits", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `uniqueId` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  uniqueId_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.uniqueId", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `updatedAt` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  updatedAt_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.updatedAt", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `updatedBy` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  updatedBy_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.updatedBy", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `usp` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  usp_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.usp", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `videoLink3D` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  videoLink3D_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.videoLink3D", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `Project` table where the `zone` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  zone_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "Project.zone", purpose: QUERY_COUNT)
+  """
+  ✨ Sum the `availableUnits` field in the `Project` table.
+  """
+  availableUnits_sum(
+    """
+    Set to true to sum the distinct values.
+    """
+    distinct: Boolean = false
+  ): Int @fdc_generated(from: "Project.availableUnits", purpose: QUERY_SUM)
+  """
+  ✨ Sum the `landParcel` field in the `Project` table.
+  """
+  landParcel_sum(
+    """
+    Set to true to sum the distinct values.
+    """
+    distinct: Boolean = false
+  ): Float @fdc_generated(from: "Project.landParcel", purpose: QUERY_SUM)
+  """
+  ✨ Sum the `numberOfTowers` field in the `Project` table.
+  """
+  numberOfTowers_sum(
+    """
+    Set to true to sum the distinct values.
+    """
+    distinct: Boolean = false
+  ): Int @fdc_generated(from: "Project.numberOfTowers", purpose: QUERY_SUM)
+  """
+  ✨ Sum the `pricingFourBhk` field in the `Project` table.
+  """
+  pricingFourBhk_sum(
+    """
+    Set to true to sum the distinct values.
+    """
+    distinct: Boolean = false
+  ): Int @fdc_generated(from: "Project.pricingFourBhk", purpose: QUERY_SUM)
+  """
+  ✨ Sum the `pricingThreeBhk` field in the `Project` table.
+  """
+  pricingThreeBhk_sum(
+    """
+    Set to true to sum the distinct values.
+    """
+    distinct: Boolean = false
+  ): Int @fdc_generated(from: "Project.pricingThreeBhk", purpose: QUERY_SUM)
+  """
+  ✨ Sum the `pricingTwoBhk` field in the `Project` table.
+  """
+  pricingTwoBhk_sum(
+    """
+    Set to true to sum the distinct values.
+    """
+    distinct: Boolean = false
+  ): Int @fdc_generated(from: "Project.pricingTwoBhk", purpose: QUERY_SUM)
+  """
+  ✨ Sum the `sftCostingPerSqft` field in the `Project` table.
+  """
+  sftCostingPerSqft_sum(
+    """
+    Set to true to sum the distinct values.
+    """
+    distinct: Boolean = false
+  ): Int @fdc_generated(from: "Project.sftCostingPerSqft", purpose: QUERY_SUM)
+  """
+  ✨ Sum the `totalUnits` field in the `Project` table.
+  """
+  totalUnits_sum(
+    """
+    Set to true to sum the distinct values.
+    """
+    distinct: Boolean = false
+  ): Int @fdc_generated(from: "Project.totalUnits", purpose: QUERY_SUM)
+  """
+  ✨ Average the `availableUnits` field in the `Project` table.
+  """
+  availableUnits_avg(
+    """
+    Set to true to average the distinct values.
+    """
+    distinct: Boolean = false
+  ): Float @fdc_generated(from: "Project.availableUnits", purpose: QUERY_AVG)
+  """
+  ✨ Average the `landParcel` field in the `Project` table.
+  """
+  landParcel_avg(
+    """
+    Set to true to average the distinct values.
+    """
+    distinct: Boolean = false
+  ): Float @fdc_generated(from: "Project.landParcel", purpose: QUERY_AVG)
+  """
+  ✨ Average the `numberOfTowers` field in the `Project` table.
+  """
+  numberOfTowers_avg(
+    """
+    Set to true to average the distinct values.
+    """
+    distinct: Boolean = false
+  ): Float @fdc_generated(from: "Project.numberOfTowers", purpose: QUERY_AVG)
+  """
+  ✨ Average the `pricingFourBhk` field in the `Project` table.
+  """
+  pricingFourBhk_avg(
+    """
+    Set to true to average the distinct values.
+    """
+    distinct: Boolean = false
+  ): Float @fdc_generated(from: "Project.pricingFourBhk", purpose: QUERY_AVG)
+  """
+  ✨ Average the `pricingThreeBhk` field in the `Project` table.
+  """
+  pricingThreeBhk_avg(
+    """
+    Set to true to average the distinct values.
+    """
+    distinct: Boolean = false
+  ): Float @fdc_generated(from: "Project.pricingThreeBhk", purpose: QUERY_AVG)
+  """
+  ✨ Average the `pricingTwoBhk` field in the `Project` table.
+  """
+  pricingTwoBhk_avg(
+    """
+    Set to true to average the distinct values.
+    """
+    distinct: Boolean = false
+  ): Float @fdc_generated(from: "Project.pricingTwoBhk", purpose: QUERY_AVG)
+  """
+  ✨ Average the `sftCostingPerSqft` field in the `Project` table.
+  """
+  sftCostingPerSqft_avg(
+    """
+    Set to true to average the distinct values.
+    """
+    distinct: Boolean = false
+  ): Float @fdc_generated(from: "Project.sftCostingPerSqft", purpose: QUERY_AVG)
+  """
+  ✨ Average the `totalUnits` field in the `Project` table.
+  """
+  totalUnits_avg(
+    """
+    Set to true to average the distinct values.
+    """
+    distinct: Boolean = false
+  ): Float @fdc_generated(from: "Project.totalUnits", purpose: QUERY_AVG)
+  """
+  ✨ Minimum of the `availableUnits` field in the `Project` table.
+  """
+  availableUnits_min: Int @fdc_generated(from: "Project.availableUnits", purpose: QUERY_MIN)
+  """
+  ✨ Minimum of the `createdAt` field in the `Project` table.
+  """
+  createdAt_min: Timestamp @fdc_generated(from: "Project.createdAt", purpose: QUERY_MIN)
+  """
+  ✨ Minimum of the `landParcel` field in the `Project` table.
+  """
+  landParcel_min: Float @fdc_generated(from: "Project.landParcel", purpose: QUERY_MIN)
+  """
+  ✨ Minimum of the `numberOfTowers` field in the `Project` table.
+  """
+  numberOfTowers_min: Int @fdc_generated(from: "Project.numberOfTowers", purpose: QUERY_MIN)
+  """
+  ✨ Minimum of the `pricingFourBhk` field in the `Project` table.
+  """
+  pricingFourBhk_min: Int @fdc_generated(from: "Project.pricingFourBhk", purpose: QUERY_MIN)
+  """
+  ✨ Minimum of the `pricingThreeBhk` field in the `Project` table.
+  """
+  pricingThreeBhk_min: Int @fdc_generated(from: "Project.pricingThreeBhk", purpose: QUERY_MIN)
+  """
+  ✨ Minimum of the `pricingTwoBhk` field in the `Project` table.
+  """
+  pricingTwoBhk_min: Int @fdc_generated(from: "Project.pricingTwoBhk", purpose: QUERY_MIN)
+  """
+  ✨ Minimum of the `sftCostingPerSqft` field in the `Project` table.
+  """
+  sftCostingPerSqft_min: Int @fdc_generated(from: "Project.sftCostingPerSqft", purpose: QUERY_MIN)
+  """
+  ✨ Minimum of the `totalUnits` field in the `Project` table.
+  """
+  totalUnits_min: Int @fdc_generated(from: "Project.totalUnits", purpose: QUERY_MIN)
+  """
+  ✨ Minimum of the `updatedAt` field in the `Project` table.
+  """
+  updatedAt_min: Timestamp @fdc_generated(from: "Project.updatedAt", purpose: QUERY_MIN)
+  """
+  ✨ Maximum of the `availableUnits` field in the `Project` table.
+  """
+  availableUnits_max: Int @fdc_generated(from: "Project.availableUnits", purpose: QUERY_MAX)
+  """
+  ✨ Maximum of the `createdAt` field in the `Project` table.
+  """
+  createdAt_max: Timestamp @fdc_generated(from: "Project.createdAt", purpose: QUERY_MAX)
+  """
+  ✨ Maximum of the `landParcel` field in the `Project` table.
+  """
+  landParcel_max: Float @fdc_generated(from: "Project.landParcel", purpose: QUERY_MAX)
+  """
+  ✨ Maximum of the `numberOfTowers` field in the `Project` table.
+  """
+  numberOfTowers_max: Int @fdc_generated(from: "Project.numberOfTowers", purpose: QUERY_MAX)
+  """
+  ✨ Maximum of the `pricingFourBhk` field in the `Project` table.
+  """
+  pricingFourBhk_max: Int @fdc_generated(from: "Project.pricingFourBhk", purpose: QUERY_MAX)
+  """
+  ✨ Maximum of the `pricingThreeBhk` field in the `Project` table.
+  """
+  pricingThreeBhk_max: Int @fdc_generated(from: "Project.pricingThreeBhk", purpose: QUERY_MAX)
+  """
+  ✨ Maximum of the `pricingTwoBhk` field in the `Project` table.
+  """
+  pricingTwoBhk_max: Int @fdc_generated(from: "Project.pricingTwoBhk", purpose: QUERY_MAX)
+  """
+  ✨ Maximum of the `sftCostingPerSqft` field in the `Project` table.
+  """
+  sftCostingPerSqft_max: Int @fdc_generated(from: "Project.sftCostingPerSqft", purpose: QUERY_MAX)
+  """
+  ✨ Maximum of the `totalUnits` field in the `Project` table.
+  """
+  totalUnits_max: Int @fdc_generated(from: "Project.totalUnits", purpose: QUERY_MAX)
+  """
+  ✨ Maximum of the `updatedAt` field in the `Project` table.
+  """
+  updatedAt_max: Timestamp @fdc_generated(from: "Project.updatedAt", purpose: QUERY_MAX)
+  """
+  A generated field that is used for caching results in SDKs.
+  """
+  _id: ID! @fdc_generated(from: "Project.id", purpose: ENTITY_ID)
+}
+extend type ProjectAmenity {
+  """
+  Implicit metadata field that cannot be written. It provides extra information about query results.
+  """
+  _metadata: _Metadata @fdc_generated(from: "ProjectAmenity", purpose: METADATA_FIELD)
+  """
+  ✨ Count the number of rows in the `ProjectAmenity` table.
+  """
+  _count: Int! @fdc_generated(from: "ProjectAmenity.", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `ProjectAmenity` table where the `amenity` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  amenity_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "ProjectAmenity.amenity", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `ProjectAmenity` table where the `id` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  id_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "ProjectAmenity.id", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `ProjectAmenity` table where the `projectId` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  projectId_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "ProjectAmenity.projectId", purpose: QUERY_COUNT)
+  """
+  A generated field that is used for caching results in SDKs.
+  """
+  _id: ID! @fdc_generated(from: "ProjectAmenity.id", purpose: ENTITY_ID)
+}
+extend type ProjectPhoto {
+  """
+  Implicit metadata field that cannot be written. It provides extra information about query results.
+  """
+  _metadata: _Metadata @fdc_generated(from: "ProjectPhoto", purpose: METADATA_FIELD)
+  """
+  ✨ Count the number of rows in the `ProjectPhoto` table.
+  """
+  _count: Int! @fdc_generated(from: "ProjectPhoto.", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `ProjectPhoto` table where the `displayOrder` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  displayOrder_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "ProjectPhoto.displayOrder", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `ProjectPhoto` table where the `id` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  id_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "ProjectPhoto.id", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `ProjectPhoto` table where the `projectId` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  projectId_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "ProjectPhoto.projectId", purpose: QUERY_COUNT)
+  """
+  ✨ Count the number of rows in the `ProjectPhoto` table where the `url` field is non-null. Pass the `distinct` argument to instead count the number of distinct values.
+  """
+  url_count(
+    """
+    Set to true to count the number of distinct values.
+    """
+    distinct: Boolean = false
+  ): Int! @fdc_generated(from: "ProjectPhoto.url", purpose: QUERY_COUNT)
+  """
+  ✨ Sum the `displayOrder` field in the `ProjectPhoto` table.
+  """
+  displayOrder_sum(
+    """
+    Set to true to sum the distinct values.
+    """
+    distinct: Boolean = false
+  ): Int @fdc_generated(from: "ProjectPhoto.displayOrder", purpose: QUERY_SUM)
+  """
+  ✨ Average the `displayOrder` field in the `ProjectPhoto` table.
+  """
+  displayOrder_avg(
+    """
+    Set to true to average the distinct values.
+    """
+    distinct: Boolean = false
+  ): Float @fdc_generated(from: "ProjectPhoto.displayOrder", purpose: QUERY_AVG)
+  """
+  ✨ Minimum of the `displayOrder` field in the `ProjectPhoto` table.
+  """
+  displayOrder_min: Int @fdc_generated(from: "ProjectPhoto.displayOrder", purpose: QUERY_MIN)
+  """
+  ✨ Maximum of the `displayOrder` field in the `ProjectPhoto` table.
+  """
+  displayOrder_max: Int @fdc_generated(from: "ProjectPhoto.displayOrder", purpose: QUERY_MAX)
+  """
+  A generated field that is used for caching results in SDKs.
+  """
+  _id: ID! @fdc_generated(from: "ProjectPhoto.id", purpose: ENTITY_ID)
+}

@@ -1,0 +1,11 @@
+specVersion: "v1"
+serviceId: "howzy-api-service"
+location: "asia-south1"
+schemas:
+  - source: "./schema"
+    datasource:
+      postgresql:
+        database: "howzy-api-database"
+        cloudSql:
+          instanceId: "howzy-api-instance"
+connectorDirs: ["./connector"]

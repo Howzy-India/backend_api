@@ -1,4 +1,81 @@
 import { toISODate, coerceDetails } from "./helpers";
+import type {
+  ProjectRow,
+  ConfigurationRow,
+  ProjectPhotoRow,
+  ProjectAmenityRow,
+  ProjectResponse,
+} from "../types/project";
+
+// ── SQL row → API response mapper ────────────────────────────────────────────
+export const mapProjectRow = (
+  row: ProjectRow & {
+    configurations?: ConfigurationRow[];
+    photos?: ProjectPhotoRow[];
+    amenities?: ProjectAmenityRow[];
+  }
+): ProjectResponse => ({
+  id: row.id,
+  uniqueId: row.unique_id,
+  name: row.name,
+  developerName: row.developer_name,
+  reraNumber: row.rera_number,
+  propertyType: row.property_type,
+  projectType: row.project_type,
+  projectSegment: row.project_segment,
+  possessionStatus: row.possession_status,
+  possessionDate: row.possession_date,
+  address: row.address,
+  zone: row.zone,
+  location: row.location,
+  area: row.area,
+  city: row.city,
+  state: row.state,
+  pincode: row.pincode,
+  landmark: row.landmark,
+  mapLink: row.map_link,
+  landParcel: row.land_parcel,
+  numberOfTowers: row.number_of_towers,
+  totalUnits: row.total_units,
+  availableUnits: row.available_units,
+  density: row.density,
+  sftCostingPerSqft: row.sft_costing_per_sqft,
+  emiStartsFrom: row.emi_starts_from,
+  pricing: {
+    twoBhk: row.pricing_two_bhk,
+    threeBhk: row.pricing_three_bhk,
+    fourBhk: row.pricing_four_bhk,
+  },
+  videoLink3D: row.video_link_3d,
+  brochureLink: row.brochure_link,
+  onboardingAgreementLink: row.onboarding_agreement_link,
+  projectManager: {
+    name: row.project_manager_name,
+    contact: row.project_manager_contact,
+  },
+  spoc: {
+    name: row.spoc_name,
+    contact: row.spoc_contact,
+  },
+  usp: row.usp,
+  teaser: row.teaser,
+  details: row.details,
+  status: row.status,
+  leadRegistrationStatus: row.lead_registration_status,
+  createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
+  updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+  configurations: (row.configurations ?? []).map((c) => ({
+    id: c.id,
+    bhkType: c.bhk_type,
+    minSft: c.min_sft,
+    maxSft: c.max_sft,
+    unitCount: c.unit_count,
+  })),
+  photos: (row.photos ?? [])
+    .sort((a, b) => a.display_order - b.display_order)
+    .map((p) => p.url),
+  amenities: (row.amenities ?? []).map((a) => a.amenity),
+});
 
 export const mapProjectDoc = (
   doc: FirebaseFirestore.QueryDocumentSnapshot

@@ -1,7 +1,13 @@
 {
   "functions": {
     "source": ".",
-    "runtime": "nodejs22"
+    "runtime": "nodejs22",
+    "secretEnvironmentVariables": [
+      { "key": "CLOUD_SQL_INSTANCE" },
+      { "key": "DB_NAME" },
+      { "key": "DB_USER" },
+      { "key": "BACKUP_SHEET_ID" }
+    ]
   },
   "firestore": {
     "rules": "firestore.rules",
@@ -10,5 +16,13 @@
   "storage": {
     "rules": "storage.rules",
     "bucket": "howzy-api.firebasestorage.app"
+  },
+  "dataconnect": {
+    "source": "dataconnect"
+  },
+  "emulators": {
+    "dataconnect": {
+      "dataDir": "dataconnect/.dataconnect/pgliteData"
+    }
   }
 }

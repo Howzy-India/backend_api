@@ -1,0 +1,3116 @@
+"""
+✨ `Configuration_KeyOutput` returns the primary key fields of table type `Configuration`.
+
+It has the same format as `Configuration_Key`, but is only used as mutation return value.
+"""
+scalar Configuration_KeyOutput
+"""
+✨ `DensityType_Expr` is a server value variant of enum type `DensityType`.
+
+It accepts a CEL expression.
+"""
+scalar DensityType_Expr
+"""
+✨ `PossessionStatus_Expr` is a server value variant of enum type `PossessionStatus`.
+
+It accepts a CEL expression.
+"""
+scalar PossessionStatus_Expr
+"""
+✨ `Project_KeyOutput` returns the primary key fields of table type `Project`.
+
+It has the same format as `Project_Key`, but is only used as mutation return value.
+"""
+scalar Project_KeyOutput
+"""
+✨ `ProjectAmenity_KeyOutput` returns the primary key fields of table type `ProjectAmenity`.
+
+It has the same format as `ProjectAmenity_Key`, but is only used as mutation return value.
+"""
+scalar ProjectAmenity_KeyOutput
+"""
+✨ `ProjectPhoto_KeyOutput` returns the primary key fields of table type `ProjectPhoto`.
+
+It has the same format as `ProjectPhoto_Key`, but is only used as mutation return value.
+"""
+scalar ProjectPhoto_KeyOutput
+"""
+✨ `ProjectSegment_Expr` is a server value variant of enum type `ProjectSegment`.
+
+It accepts a CEL expression.
+"""
+scalar ProjectSegment_Expr
+"""
+✨ `ProjectStatus_Expr` is a server value variant of enum type `ProjectStatus`.
+
+It accepts a CEL expression.
+"""
+scalar ProjectStatus_Expr
+"""
+✨ `ProjectType_Expr` is a server value variant of enum type `ProjectType`.
+
+It accepts a CEL expression.
+"""
+scalar ProjectType_Expr
+"""
+✨ `ProjectZone_Expr` is a server value variant of enum type `ProjectZone`.
+
+It accepts a CEL expression.
+"""
+scalar ProjectZone_Expr
+"""
+✨ `PropertyType_Expr` is a server value variant of enum type `PropertyType`.
+
+It accepts a CEL expression.
+"""
+scalar PropertyType_Expr
+"""
+✨ Generated data input type for table 'Configuration'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input Configuration_Data {
+  """
+  ✨ Generated from Field `Configuration`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Configuration`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Configuration`.`projectId` of type `UUID!`
+  """
+  projectId: UUID
+  """
+  ✨ `_expr` server value variant of `projectId` (✨ Generated from Field `Configuration`.`projectId` of type `UUID!`)
+  """
+  projectId_expr: UUID_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Configuration`.`project` of type `Project!`
+  """
+  project: Project_Key @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Configuration`.`bhkCount` of type `Int!`
+  """
+  bhkCount: Int
+  """
+  ✨ `_expr` server value variant of `bhkCount` (✨ Generated from Field `Configuration`.`bhkCount` of type `Int!`)
+  """
+  bhkCount_expr: Int_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `bhkCount` (✨ Generated from Field `Configuration`.`bhkCount` of type `Int!`)
+  """
+  bhkCount_update: [Int_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Configuration`.`maxSft` of type `Int!`
+  """
+  maxSft: Int
+  """
+  ✨ `_expr` server value variant of `maxSft` (✨ Generated from Field `Configuration`.`maxSft` of type `Int!`)
+  """
+  maxSft_expr: Int_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `maxSft` (✨ Generated from Field `Configuration`.`maxSft` of type `Int!`)
+  """
+  maxSft_update: [Int_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Configuration`.`minSft` of type `Int!`
+  """
+  minSft: Int
+  """
+  ✨ `_expr` server value variant of `minSft` (✨ Generated from Field `Configuration`.`minSft` of type `Int!`)
+  """
+  minSft_expr: Int_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `minSft` (✨ Generated from Field `Configuration`.`minSft` of type `Int!`)
+  """
+  minSft_update: [Int_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Configuration`.`unitCount` of type `Int!`
+  """
+  unitCount: Int
+  """
+  ✨ `_expr` server value variant of `unitCount` (✨ Generated from Field `Configuration`.`unitCount` of type `Int!`)
+  """
+  unitCount_expr: Int_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `unitCount` (✨ Generated from Field `Configuration`.`unitCount` of type `Int!`)
+  """
+  unitCount_update: [Int_Update!] @fdc_forbiddenInVariables
+}
+"""
+✨ Generated filter input type for table 'Configuration'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Configuration_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [Configuration_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: Configuration_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [Configuration_Filter!]
+  """
+  ✨ Generated from Field `Configuration`.`id` of type `UUID!`
+  """
+  id: UUID_Filter
+  """
+  ✨ Generated from Field `Configuration`.`projectId` of type `UUID!`
+  """
+  projectId: UUID_Filter
+  """
+  ✨ Generated from Field `Configuration`.`project` of type `Project!`
+  """
+  project: Project_Filter
+  """
+  ✨ Generated from Field `Configuration`.`bhkCount` of type `Int!`
+  """
+  bhkCount: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`maxSft` of type `Int!`
+  """
+  maxSft: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`minSft` of type `Int!`
+  """
+  minSft: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`unitCount` of type `Int!`
+  """
+  unitCount: Int_Filter
+}
+"""
+✨ Generated first-row input type for table 'Configuration'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input Configuration_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [Configuration_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: Configuration_Filter
+}
+"""
+✨ Generated having input type for table 'Configuration'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Configuration_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [Configuration_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: Configuration_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [Configuration_Having!]
+  """
+  ✨ Generated from Field `Configuration`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`bhkCount_count` of type `Int!`
+  """
+  bhkCount_count: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`maxSft_count` of type `Int!`
+  """
+  maxSft_count: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`minSft_count` of type `Int!`
+  """
+  minSft_count: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`projectId_count` of type `Int!`
+  """
+  projectId_count: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`unitCount_count` of type `Int!`
+  """
+  unitCount_count: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`bhkCount_sum` of type `Int`
+  """
+  bhkCount_sum: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`maxSft_sum` of type `Int`
+  """
+  maxSft_sum: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`minSft_sum` of type `Int`
+  """
+  minSft_sum: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`unitCount_sum` of type `Int`
+  """
+  unitCount_sum: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`bhkCount_avg` of type `Float`
+  """
+  bhkCount_avg: Float_Filter
+  """
+  ✨ Generated from Field `Configuration`.`maxSft_avg` of type `Float`
+  """
+  maxSft_avg: Float_Filter
+  """
+  ✨ Generated from Field `Configuration`.`minSft_avg` of type `Float`
+  """
+  minSft_avg: Float_Filter
+  """
+  ✨ Generated from Field `Configuration`.`unitCount_avg` of type `Float`
+  """
+  unitCount_avg: Float_Filter
+  """
+  ✨ Generated from Field `Configuration`.`bhkCount_min` of type `Int`
+  """
+  bhkCount_min: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`maxSft_min` of type `Int`
+  """
+  maxSft_min: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`minSft_min` of type `Int`
+  """
+  minSft_min: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`unitCount_min` of type `Int`
+  """
+  unitCount_min: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`bhkCount_max` of type `Int`
+  """
+  bhkCount_max: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`maxSft_max` of type `Int`
+  """
+  maxSft_max: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`minSft_max` of type `Int`
+  """
+  minSft_max: Int_Filter
+  """
+  ✨ Generated from Field `Configuration`.`unitCount_max` of type `Int`
+  """
+  unitCount_max: Int_Filter
+}
+"""
+✨ Generated key input type for table 'Configuration'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input Configuration_Key {
+  """
+  ✨ Generated from Field `Configuration`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Configuration`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'Configuration'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input Configuration_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: Configuration_Filter
+}
+"""
+✨ Generated order input type for table 'Configuration'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input Configuration_Order {
+  """
+  ✨ Generated from Field `Configuration`.`id` of type `UUID!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`projectId` of type `UUID!`
+  """
+  projectId: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`project` of type `Project!`
+  """
+  project: Project_Order
+  """
+  ✨ Generated from Field `Configuration`.`bhkCount` of type `Int!`
+  """
+  bhkCount: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`maxSft` of type `Int!`
+  """
+  maxSft: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`minSft` of type `Int!`
+  """
+  minSft: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`unitCount` of type `Int!`
+  """
+  unitCount: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`bhkCount_count` of type `Int!`
+  """
+  bhkCount_count: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`maxSft_count` of type `Int!`
+  """
+  maxSft_count: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`minSft_count` of type `Int!`
+  """
+  minSft_count: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`projectId_count` of type `Int!`
+  """
+  projectId_count: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`unitCount_count` of type `Int!`
+  """
+  unitCount_count: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`bhkCount_sum` of type `Int`
+  """
+  bhkCount_sum: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`maxSft_sum` of type `Int`
+  """
+  maxSft_sum: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`minSft_sum` of type `Int`
+  """
+  minSft_sum: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`unitCount_sum` of type `Int`
+  """
+  unitCount_sum: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`bhkCount_avg` of type `Float`
+  """
+  bhkCount_avg: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`maxSft_avg` of type `Float`
+  """
+  maxSft_avg: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`minSft_avg` of type `Float`
+  """
+  minSft_avg: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`unitCount_avg` of type `Float`
+  """
+  unitCount_avg: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`bhkCount_min` of type `Int`
+  """
+  bhkCount_min: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`maxSft_min` of type `Int`
+  """
+  maxSft_min: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`minSft_min` of type `Int`
+  """
+  minSft_min: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`unitCount_min` of type `Int`
+  """
+  unitCount_min: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`bhkCount_max` of type `Int`
+  """
+  bhkCount_max: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`maxSft_max` of type `Int`
+  """
+  maxSft_max: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`minSft_max` of type `Int`
+  """
+  minSft_max: OrderDirection
+  """
+  ✨ Generated from Field `Configuration`.`unitCount_max` of type `Int`
+  """
+  unitCount_max: OrderDirection
+}
+"""
+✨ Generated filter input type for table 'DensityType'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input DensityType_Filter {
+  """
+  Match if field is exactly equal to provided value.
+  """
+  eq: DensityType
+  """
+  ✨ `_expr` server value variant of `eq` (Match if field is exactly equal to provided value.)
+  """
+  eq_expr: DensityType_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is not equal to provided value.
+  """
+  ne: DensityType
+  """
+  ✨ `_expr` server value variant of `ne` (Match if field is not equal to provided value.)
+  """
+  ne_expr: DensityType_Expr @fdc_forbiddenInVariables
+  """
+  When true, match if field `IS NULL`. When false, match if field is `NOT NULL`.
+  """
+  isNull: Boolean
+  """
+  Match if field value is among the provided list of values.
+  """
+  in: [DensityType!]
+  """
+  Match if field value is not among the provided list of values.
+  """
+  nin: [DensityType!]
+  """
+  Match if field value is greater than the provided value, based on index ordering of supported enum values.
+  """
+  gt: DensityType
+  """
+  ✨ `_expr` server value variant of `gt` (Match if field value is greater than the provided value, based on index ordering of supported enum values.)
+  """
+  gt_expr: DensityType_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is greater than or equal to the provided value.
+  """
+  ge: DensityType
+  """
+  ✨ `_expr` server value variant of `ge` (Match if field is greater than or equal to the provided value.)
+  """
+  ge_expr: DensityType_Expr @fdc_forbiddenInVariables
+  """
+  Match if field value is less than the provided value, based on index ordering of supported enum values.
+  """
+  lt: DensityType
+  """
+  ✨ `_expr` server value variant of `lt` (Match if field value is less than the provided value, based on index ordering of supported enum values.)
+  """
+  lt_expr: DensityType_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is less than or equal to the provided value, based on index ordering of supported enum values.
+  """
+  le: DensityType
+  """
+  ✨ `_expr` server value variant of `le` (Match if field is less than or equal to the provided value, based on index ordering of supported enum values.)
+  """
+  le_expr: DensityType_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'DensityType'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input DensityType_ListFilter {
+  """
+  Match if list field contains the provided value as a member.
+  """
+  includes: DensityType
+  """
+  ✨ `_expr` server value variant of `includes` (Match if list field contains the provided value as a member.)
+  """
+  includes_expr: DensityType_Expr @fdc_forbiddenInVariables
+  """
+  Match if list field contains all of the provided values as members.
+  """
+  includesAll: [DensityType!]
+  """
+  Match if list field does not contain the provided value as a member.
+  """
+  excludes: DensityType
+  """
+  ✨ `_expr` server value variant of `excludes` (Match if list field does not contain the provided value as a member.)
+  """
+  excludes_expr: DensityType_Expr @fdc_forbiddenInVariables
+  """
+  Match if list field does not contain any of the provided values as members.
+  """
+  excludesAll: [DensityType!]
+  """
+  The desired number of enum values that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: DensityType_Filter
+}
+"""
+✨ Generated filter input type for table 'PossessionStatus'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input PossessionStatus_Filter {
+  """
+  Match if field is exactly equal to provided value.
+  """
+  eq: PossessionStatus
+  """
+  ✨ `_expr` server value variant of `eq` (Match if field is exactly equal to provided value.)
+  """
+  eq_expr: PossessionStatus_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is not equal to provided value.
+  """
+  ne: PossessionStatus
+  """
+  ✨ `_expr` server value variant of `ne` (Match if field is not equal to provided value.)
+  """
+  ne_expr: PossessionStatus_Expr @fdc_forbiddenInVariables
+  """
+  When true, match if field `IS NULL`. When false, match if field is `NOT NULL`.
+  """
+  isNull: Boolean
+  """
+  Match if field value is among the provided list of values.
+  """
+  in: [PossessionStatus!]
+  """
+  Match if field value is not among the provided list of values.
+  """
+  nin: [PossessionStatus!]
+  """
+  Match if field value is greater than the provided value, based on index ordering of supported enum values.
+  """
+  gt: PossessionStatus
+  """
+  ✨ `_expr` server value variant of `gt` (Match if field value is greater than the provided value, based on index ordering of supported enum values.)
+  """
+  gt_expr: PossessionStatus_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is greater than or equal to the provided value.
+  """
+  ge: PossessionStatus
+  """
+  ✨ `_expr` server value variant of `ge` (Match if field is greater than or equal to the provided value.)
+  """
+  ge_expr: PossessionStatus_Expr @fdc_forbiddenInVariables
+  """
+  Match if field value is less than the provided value, based on index ordering of supported enum values.
+  """
+  lt: PossessionStatus
+  """
+  ✨ `_expr` server value variant of `lt` (Match if field value is less than the provided value, based on index ordering of supported enum values.)
+  """
+  lt_expr: PossessionStatus_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is less than or equal to the provided value, based on index ordering of supported enum values.
+  """
+  le: PossessionStatus
+  """
+  ✨ `_expr` server value variant of `le` (Match if field is less than or equal to the provided value, based on index ordering of supported enum values.)
+  """
+  le_expr: PossessionStatus_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'PossessionStatus'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input PossessionStatus_ListFilter {
+  """
+  Match if list field contains the provided value as a member.
+  """
+  includes: PossessionStatus
+  """
+  ✨ `_expr` server value variant of `includes` (Match if list field contains the provided value as a member.)
+  """
+  includes_expr: PossessionStatus_Expr @fdc_forbiddenInVariables
+  """
+  Match if list field contains all of the provided values as members.
+  """
+  includesAll: [PossessionStatus!]
+  """
+  Match if list field does not contain the provided value as a member.
+  """
+  excludes: PossessionStatus
+  """
+  ✨ `_expr` server value variant of `excludes` (Match if list field does not contain the provided value as a member.)
+  """
+  excludes_expr: PossessionStatus_Expr @fdc_forbiddenInVariables
+  """
+  Match if list field does not contain any of the provided values as members.
+  """
+  excludesAll: [PossessionStatus!]
+  """
+  The desired number of enum values that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: PossessionStatus_Filter
+}
+"""
+✨ Generated data input type for table 'Project'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input Project_Data {
+  """
+  ✨ Generated from Field `Project`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Project`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`address` of type `String`
+  """
+  address: String
+  """
+  ✨ `_expr` server value variant of `address` (✨ Generated from Field `Project`.`address` of type `String`)
+  """
+  address_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`area` of type `String`
+  """
+  area: String
+  """
+  ✨ `_expr` server value variant of `area` (✨ Generated from Field `Project`.`area` of type `String`)
+  """
+  area_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`availableUnits` of type `Int`
+  """
+  availableUnits: Int
+  """
+  ✨ `_expr` server value variant of `availableUnits` (✨ Generated from Field `Project`.`availableUnits` of type `Int`)
+  """
+  availableUnits_expr: Int_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `availableUnits` (✨ Generated from Field `Project`.`availableUnits` of type `Int`)
+  """
+  availableUnits_update: [Int_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`brochureLink` of type `String`
+  """
+  brochureLink: String
+  """
+  ✨ `_expr` server value variant of `brochureLink` (✨ Generated from Field `Project`.`brochureLink` of type `String`)
+  """
+  brochureLink_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`city` of type `String!`
+  """
+  city: String
+  """
+  ✨ `_expr` server value variant of `city` (✨ Generated from Field `Project`.`city` of type `String!`)
+  """
+  city_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `createdAt` (✨ Generated from Field `Project`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `createdAt` (✨ Generated from Field `Project`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `createdAt` (✨ Generated from Field `Project`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`createdBy` of type `String`
+  """
+  createdBy: String
+  """
+  ✨ `_expr` server value variant of `createdBy` (✨ Generated from Field `Project`.`createdBy` of type `String`)
+  """
+  createdBy_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`density` of type `DensityType`
+  """
+  density: DensityType
+  """
+  ✨ `_expr` server value variant of `density` (✨ Generated from Field `Project`.`density` of type `DensityType`)
+  """
+  density_expr: DensityType_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`details` of type `String`
+  """
+  details: String
+  """
+  ✨ `_expr` server value variant of `details` (✨ Generated from Field `Project`.`details` of type `String`)
+  """
+  details_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`developerName` of type `String!`
+  """
+  developerName: String
+  """
+  ✨ `_expr` server value variant of `developerName` (✨ Generated from Field `Project`.`developerName` of type `String!`)
+  """
+  developerName_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`emiStartsFrom` of type `String`
+  """
+  emiStartsFrom: String
+  """
+  ✨ `_expr` server value variant of `emiStartsFrom` (✨ Generated from Field `Project`.`emiStartsFrom` of type `String`)
+  """
+  emiStartsFrom_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`landParcel` of type `Float`
+  """
+  landParcel: Float
+  """
+  ✨ `_expr` server value variant of `landParcel` (✨ Generated from Field `Project`.`landParcel` of type `Float`)
+  """
+  landParcel_expr: Float_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `landParcel` (✨ Generated from Field `Project`.`landParcel` of type `Float`)
+  """
+  landParcel_update: [Float_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`landmark` of type `String`
+  """
+  landmark: String
+  """
+  ✨ `_expr` server value variant of `landmark` (✨ Generated from Field `Project`.`landmark` of type `String`)
+  """
+  landmark_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`leadRegistrationStatus` of type `String`
+  """
+  leadRegistrationStatus: String
+  """
+  ✨ `_expr` server value variant of `leadRegistrationStatus` (✨ Generated from Field `Project`.`leadRegistrationStatus` of type `String`)
+  """
+  leadRegistrationStatus_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`location` of type `String`
+  """
+  location: String
+  """
+  ✨ `_expr` server value variant of `location` (✨ Generated from Field `Project`.`location` of type `String`)
+  """
+  location_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`mapLink` of type `String`
+  """
+  mapLink: String
+  """
+  ✨ `_expr` server value variant of `mapLink` (✨ Generated from Field `Project`.`mapLink` of type `String`)
+  """
+  mapLink_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`name` of type `String!`
+  """
+  name: String
+  """
+  ✨ `_expr` server value variant of `name` (✨ Generated from Field `Project`.`name` of type `String!`)
+  """
+  name_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`numberOfTowers` of type `Int`
+  """
+  numberOfTowers: Int
+  """
+  ✨ `_expr` server value variant of `numberOfTowers` (✨ Generated from Field `Project`.`numberOfTowers` of type `Int`)
+  """
+  numberOfTowers_expr: Int_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `numberOfTowers` (✨ Generated from Field `Project`.`numberOfTowers` of type `Int`)
+  """
+  numberOfTowers_update: [Int_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`onboardingAgreementLink` of type `String`
+  """
+  onboardingAgreementLink: String
+  """
+  ✨ `_expr` server value variant of `onboardingAgreementLink` (✨ Generated from Field `Project`.`onboardingAgreementLink` of type `String`)
+  """
+  onboardingAgreementLink_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`pincode` of type `String`
+  """
+  pincode: String
+  """
+  ✨ `_expr` server value variant of `pincode` (✨ Generated from Field `Project`.`pincode` of type `String`)
+  """
+  pincode_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`possessionDate` of type `String`
+  """
+  possessionDate: String
+  """
+  ✨ `_expr` server value variant of `possessionDate` (✨ Generated from Field `Project`.`possessionDate` of type `String`)
+  """
+  possessionDate_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`possessionStatus` of type `PossessionStatus`
+  """
+  possessionStatus: PossessionStatus
+  """
+  ✨ `_expr` server value variant of `possessionStatus` (✨ Generated from Field `Project`.`possessionStatus` of type `PossessionStatus`)
+  """
+  possessionStatus_expr: PossessionStatus_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`pricingFourBhk` of type `Int`
+  """
+  pricingFourBhk: Int
+  """
+  ✨ `_expr` server value variant of `pricingFourBhk` (✨ Generated from Field `Project`.`pricingFourBhk` of type `Int`)
+  """
+  pricingFourBhk_expr: Int_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `pricingFourBhk` (✨ Generated from Field `Project`.`pricingFourBhk` of type `Int`)
+  """
+  pricingFourBhk_update: [Int_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`pricingThreeBhk` of type `Int`
+  """
+  pricingThreeBhk: Int
+  """
+  ✨ `_expr` server value variant of `pricingThreeBhk` (✨ Generated from Field `Project`.`pricingThreeBhk` of type `Int`)
+  """
+  pricingThreeBhk_expr: Int_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `pricingThreeBhk` (✨ Generated from Field `Project`.`pricingThreeBhk` of type `Int`)
+  """
+  pricingThreeBhk_update: [Int_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`pricingTwoBhk` of type `Int`
+  """
+  pricingTwoBhk: Int
+  """
+  ✨ `_expr` server value variant of `pricingTwoBhk` (✨ Generated from Field `Project`.`pricingTwoBhk` of type `Int`)
+  """
+  pricingTwoBhk_expr: Int_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `pricingTwoBhk` (✨ Generated from Field `Project`.`pricingTwoBhk` of type `Int`)
+  """
+  pricingTwoBhk_update: [Int_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`projectManagerContact` of type `String`
+  """
+  projectManagerContact: String
+  """
+  ✨ `_expr` server value variant of `projectManagerContact` (✨ Generated from Field `Project`.`projectManagerContact` of type `String`)
+  """
+  projectManagerContact_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`projectManagerName` of type `String`
+  """
+  projectManagerName: String
+  """
+  ✨ `_expr` server value variant of `projectManagerName` (✨ Generated from Field `Project`.`projectManagerName` of type `String`)
+  """
+  projectManagerName_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`projectSegment` of type `ProjectSegment`
+  """
+  projectSegment: ProjectSegment
+  """
+  ✨ `_expr` server value variant of `projectSegment` (✨ Generated from Field `Project`.`projectSegment` of type `ProjectSegment`)
+  """
+  projectSegment_expr: ProjectSegment_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`projectType` of type `ProjectType`
+  """
+  projectType: ProjectType
+  """
+  ✨ `_expr` server value variant of `projectType` (✨ Generated from Field `Project`.`projectType` of type `ProjectType`)
+  """
+  projectType_expr: ProjectType_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`propertyType` of type `PropertyType!`
+  """
+  propertyType: PropertyType
+  """
+  ✨ `_expr` server value variant of `propertyType` (✨ Generated from Field `Project`.`propertyType` of type `PropertyType!`)
+  """
+  propertyType_expr: PropertyType_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`reraNumber` of type `String`
+  """
+  reraNumber: String
+  """
+  ✨ `_expr` server value variant of `reraNumber` (✨ Generated from Field `Project`.`reraNumber` of type `String`)
+  """
+  reraNumber_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`sftCostingPerSqft` of type `Int`
+  """
+  sftCostingPerSqft: Int
+  """
+  ✨ `_expr` server value variant of `sftCostingPerSqft` (✨ Generated from Field `Project`.`sftCostingPerSqft` of type `Int`)
+  """
+  sftCostingPerSqft_expr: Int_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `sftCostingPerSqft` (✨ Generated from Field `Project`.`sftCostingPerSqft` of type `Int`)
+  """
+  sftCostingPerSqft_update: [Int_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`spocContact` of type `String`
+  """
+  spocContact: String
+  """
+  ✨ `_expr` server value variant of `spocContact` (✨ Generated from Field `Project`.`spocContact` of type `String`)
+  """
+  spocContact_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`spocName` of type `String`
+  """
+  spocName: String
+  """
+  ✨ `_expr` server value variant of `spocName` (✨ Generated from Field `Project`.`spocName` of type `String`)
+  """
+  spocName_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`state` of type `String`
+  """
+  state: String
+  """
+  ✨ `_expr` server value variant of `state` (✨ Generated from Field `Project`.`state` of type `String`)
+  """
+  state_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`status` of type `ProjectStatus!`
+  """
+  status: ProjectStatus
+  """
+  ✨ `_expr` server value variant of `status` (✨ Generated from Field `Project`.`status` of type `ProjectStatus!`)
+  """
+  status_expr: ProjectStatus_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`teaser` of type `String`
+  """
+  teaser: String
+  """
+  ✨ `_expr` server value variant of `teaser` (✨ Generated from Field `Project`.`teaser` of type `String`)
+  """
+  teaser_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`totalUnits` of type `Int`
+  """
+  totalUnits: Int
+  """
+  ✨ `_expr` server value variant of `totalUnits` (✨ Generated from Field `Project`.`totalUnits` of type `Int`)
+  """
+  totalUnits_expr: Int_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `totalUnits` (✨ Generated from Field `Project`.`totalUnits` of type `Int`)
+  """
+  totalUnits_update: [Int_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`uniqueId` of type `String!`
+  """
+  uniqueId: String
+  """
+  ✨ `_expr` server value variant of `uniqueId` (✨ Generated from Field `Project`.`uniqueId` of type `String!`)
+  """
+  uniqueId_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`updatedAt` of type `Timestamp`
+  """
+  updatedAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `updatedAt` (✨ Generated from Field `Project`.`updatedAt` of type `Timestamp`)
+  """
+  updatedAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `updatedAt` (✨ Generated from Field `Project`.`updatedAt` of type `Timestamp`)
+  """
+  updatedAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `updatedAt` (✨ Generated from Field `Project`.`updatedAt` of type `Timestamp`)
+  """
+  updatedAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`updatedBy` of type `String`
+  """
+  updatedBy: String
+  """
+  ✨ `_expr` server value variant of `updatedBy` (✨ Generated from Field `Project`.`updatedBy` of type `String`)
+  """
+  updatedBy_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`usp` of type `String`
+  """
+  usp: String
+  """
+  ✨ `_expr` server value variant of `usp` (✨ Generated from Field `Project`.`usp` of type `String`)
+  """
+  usp_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`videoLink3D` of type `String`
+  """
+  videoLink3D: String
+  """
+  ✨ `_expr` server value variant of `videoLink3D` (✨ Generated from Field `Project`.`videoLink3D` of type `String`)
+  """
+  videoLink3D_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Project`.`zone` of type `ProjectZone`
+  """
+  zone: ProjectZone
+  """
+  ✨ `_expr` server value variant of `zone` (✨ Generated from Field `Project`.`zone` of type `ProjectZone`)
+  """
+  zone_expr: ProjectZone_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated filter input type for table 'Project'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Project_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [Project_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: Project_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [Project_Filter!]
+  """
+  ✨ Generated from Field `Project`.`id` of type `UUID!`
+  """
+  id: UUID_Filter
+  """
+  ✨ Generated from Field `Project`.`address` of type `String`
+  """
+  address: String_Filter
+  """
+  ✨ Generated from Field `Project`.`area` of type `String`
+  """
+  area: String_Filter
+  """
+  ✨ Generated from Field `Project`.`availableUnits` of type `Int`
+  """
+  availableUnits: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`brochureLink` of type `String`
+  """
+  brochureLink: String_Filter
+  """
+  ✨ Generated from Field `Project`.`city` of type `String!`
+  """
+  city: String_Filter
+  """
+  ✨ Generated from Field `Project`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `Project`.`createdBy` of type `String`
+  """
+  createdBy: String_Filter
+  """
+  ✨ Generated from Field `Project`.`density` of type `DensityType`
+  """
+  density: DensityType_Filter
+  """
+  ✨ Generated from Field `Project`.`details` of type `String`
+  """
+  details: String_Filter
+  """
+  ✨ Generated from Field `Project`.`developerName` of type `String!`
+  """
+  developerName: String_Filter
+  """
+  ✨ Generated from Field `Project`.`emiStartsFrom` of type `String`
+  """
+  emiStartsFrom: String_Filter
+  """
+  ✨ Generated from Field `Project`.`landParcel` of type `Float`
+  """
+  landParcel: Float_Filter
+  """
+  ✨ Generated from Field `Project`.`landmark` of type `String`
+  """
+  landmark: String_Filter
+  """
+  ✨ Generated from Field `Project`.`leadRegistrationStatus` of type `String`
+  """
+  leadRegistrationStatus: String_Filter
+  """
+  ✨ Generated from Field `Project`.`location` of type `String`
+  """
+  location: String_Filter
+  """
+  ✨ Generated from Field `Project`.`mapLink` of type `String`
+  """
+  mapLink: String_Filter
+  """
+  ✨ Generated from Field `Project`.`name` of type `String!`
+  """
+  name: String_Filter
+  """
+  ✨ Generated from Field `Project`.`numberOfTowers` of type `Int`
+  """
+  numberOfTowers: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`onboardingAgreementLink` of type `String`
+  """
+  onboardingAgreementLink: String_Filter
+  """
+  ✨ Generated from Field `Project`.`pincode` of type `String`
+  """
+  pincode: String_Filter
+  """
+  ✨ Generated from Field `Project`.`possessionDate` of type `String`
+  """
+  possessionDate: String_Filter
+  """
+  ✨ Generated from Field `Project`.`possessionStatus` of type `PossessionStatus`
+  """
+  possessionStatus: PossessionStatus_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingFourBhk` of type `Int`
+  """
+  pricingFourBhk: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingThreeBhk` of type `Int`
+  """
+  pricingThreeBhk: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingTwoBhk` of type `Int`
+  """
+  pricingTwoBhk: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`projectManagerContact` of type `String`
+  """
+  projectManagerContact: String_Filter
+  """
+  ✨ Generated from Field `Project`.`projectManagerName` of type `String`
+  """
+  projectManagerName: String_Filter
+  """
+  ✨ Generated from Field `Project`.`projectSegment` of type `ProjectSegment`
+  """
+  projectSegment: ProjectSegment_Filter
+  """
+  ✨ Generated from Field `Project`.`projectType` of type `ProjectType`
+  """
+  projectType: ProjectType_Filter
+  """
+  ✨ Generated from Field `Project`.`propertyType` of type `PropertyType!`
+  """
+  propertyType: PropertyType_Filter
+  """
+  ✨ Generated from Field `Project`.`reraNumber` of type `String`
+  """
+  reraNumber: String_Filter
+  """
+  ✨ Generated from Field `Project`.`sftCostingPerSqft` of type `Int`
+  """
+  sftCostingPerSqft: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`spocContact` of type `String`
+  """
+  spocContact: String_Filter
+  """
+  ✨ Generated from Field `Project`.`spocName` of type `String`
+  """
+  spocName: String_Filter
+  """
+  ✨ Generated from Field `Project`.`state` of type `String`
+  """
+  state: String_Filter
+  """
+  ✨ Generated from Field `Project`.`status` of type `ProjectStatus!`
+  """
+  status: ProjectStatus_Filter
+  """
+  ✨ Generated from Field `Project`.`teaser` of type `String`
+  """
+  teaser: String_Filter
+  """
+  ✨ Generated from Field `Project`.`totalUnits` of type `Int`
+  """
+  totalUnits: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`uniqueId` of type `String!`
+  """
+  uniqueId: String_Filter
+  """
+  ✨ Generated from Field `Project`.`updatedAt` of type `Timestamp`
+  """
+  updatedAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `Project`.`updatedBy` of type `String`
+  """
+  updatedBy: String_Filter
+  """
+  ✨ Generated from Field `Project`.`usp` of type `String`
+  """
+  usp: String_Filter
+  """
+  ✨ Generated from Field `Project`.`videoLink3D` of type `String`
+  """
+  videoLink3D: String_Filter
+  """
+  ✨ Generated from Field `Project`.`zone` of type `ProjectZone`
+  """
+  zone: ProjectZone_Filter
+  """
+  ✨ Generated from Field `Project`.`configurations_on_project` of type `[Configuration!]!`
+  """
+  configurations_on_project: Configuration_ListFilter
+  """
+  ✨ Generated from Field `Project`.`projectAmenities_on_project` of type `[ProjectAmenity!]!`
+  """
+  projectAmenities_on_project: ProjectAmenity_ListFilter
+  """
+  ✨ Generated from Field `Project`.`projectPhotos_on_project` of type `[ProjectPhoto!]!`
+  """
+  projectPhotos_on_project: ProjectPhoto_ListFilter
+}
+"""
+✨ Generated first-row input type for table 'Project'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input Project_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [Project_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: Project_Filter
+}
+"""
+✨ Generated having input type for table 'Project'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Project_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [Project_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: Project_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [Project_Having!]
+  """
+  ✨ Generated from Field `Project`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`address_count` of type `Int!`
+  """
+  address_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`area_count` of type `Int!`
+  """
+  area_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`availableUnits_count` of type `Int!`
+  """
+  availableUnits_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`brochureLink_count` of type `Int!`
+  """
+  brochureLink_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`city_count` of type `Int!`
+  """
+  city_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`createdBy_count` of type `Int!`
+  """
+  createdBy_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`density_count` of type `Int!`
+  """
+  density_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`details_count` of type `Int!`
+  """
+  details_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`developerName_count` of type `Int!`
+  """
+  developerName_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`emiStartsFrom_count` of type `Int!`
+  """
+  emiStartsFrom_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`landParcel_count` of type `Int!`
+  """
+  landParcel_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`landmark_count` of type `Int!`
+  """
+  landmark_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`leadRegistrationStatus_count` of type `Int!`
+  """
+  leadRegistrationStatus_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`location_count` of type `Int!`
+  """
+  location_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`mapLink_count` of type `Int!`
+  """
+  mapLink_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`name_count` of type `Int!`
+  """
+  name_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`numberOfTowers_count` of type `Int!`
+  """
+  numberOfTowers_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`onboardingAgreementLink_count` of type `Int!`
+  """
+  onboardingAgreementLink_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`pincode_count` of type `Int!`
+  """
+  pincode_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`possessionDate_count` of type `Int!`
+  """
+  possessionDate_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`possessionStatus_count` of type `Int!`
+  """
+  possessionStatus_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingFourBhk_count` of type `Int!`
+  """
+  pricingFourBhk_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingThreeBhk_count` of type `Int!`
+  """
+  pricingThreeBhk_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingTwoBhk_count` of type `Int!`
+  """
+  pricingTwoBhk_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`projectManagerContact_count` of type `Int!`
+  """
+  projectManagerContact_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`projectManagerName_count` of type `Int!`
+  """
+  projectManagerName_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`projectSegment_count` of type `Int!`
+  """
+  projectSegment_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`projectType_count` of type `Int!`
+  """
+  projectType_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`propertyType_count` of type `Int!`
+  """
+  propertyType_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`reraNumber_count` of type `Int!`
+  """
+  reraNumber_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`sftCostingPerSqft_count` of type `Int!`
+  """
+  sftCostingPerSqft_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`spocContact_count` of type `Int!`
+  """
+  spocContact_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`spocName_count` of type `Int!`
+  """
+  spocName_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`state_count` of type `Int!`
+  """
+  state_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`status_count` of type `Int!`
+  """
+  status_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`teaser_count` of type `Int!`
+  """
+  teaser_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`totalUnits_count` of type `Int!`
+  """
+  totalUnits_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`uniqueId_count` of type `Int!`
+  """
+  uniqueId_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`updatedAt_count` of type `Int!`
+  """
+  updatedAt_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`updatedBy_count` of type `Int!`
+  """
+  updatedBy_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`usp_count` of type `Int!`
+  """
+  usp_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`videoLink3D_count` of type `Int!`
+  """
+  videoLink3D_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`zone_count` of type `Int!`
+  """
+  zone_count: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`availableUnits_sum` of type `Int`
+  """
+  availableUnits_sum: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`landParcel_sum` of type `Float`
+  """
+  landParcel_sum: Float_Filter
+  """
+  ✨ Generated from Field `Project`.`numberOfTowers_sum` of type `Int`
+  """
+  numberOfTowers_sum: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingFourBhk_sum` of type `Int`
+  """
+  pricingFourBhk_sum: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingThreeBhk_sum` of type `Int`
+  """
+  pricingThreeBhk_sum: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingTwoBhk_sum` of type `Int`
+  """
+  pricingTwoBhk_sum: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`sftCostingPerSqft_sum` of type `Int`
+  """
+  sftCostingPerSqft_sum: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`totalUnits_sum` of type `Int`
+  """
+  totalUnits_sum: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`availableUnits_avg` of type `Float`
+  """
+  availableUnits_avg: Float_Filter
+  """
+  ✨ Generated from Field `Project`.`landParcel_avg` of type `Float`
+  """
+  landParcel_avg: Float_Filter
+  """
+  ✨ Generated from Field `Project`.`numberOfTowers_avg` of type `Float`
+  """
+  numberOfTowers_avg: Float_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingFourBhk_avg` of type `Float`
+  """
+  pricingFourBhk_avg: Float_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingThreeBhk_avg` of type `Float`
+  """
+  pricingThreeBhk_avg: Float_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingTwoBhk_avg` of type `Float`
+  """
+  pricingTwoBhk_avg: Float_Filter
+  """
+  ✨ Generated from Field `Project`.`sftCostingPerSqft_avg` of type `Float`
+  """
+  sftCostingPerSqft_avg: Float_Filter
+  """
+  ✨ Generated from Field `Project`.`totalUnits_avg` of type `Float`
+  """
+  totalUnits_avg: Float_Filter
+  """
+  ✨ Generated from Field `Project`.`availableUnits_min` of type `Int`
+  """
+  availableUnits_min: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `Project`.`landParcel_min` of type `Float`
+  """
+  landParcel_min: Float_Filter
+  """
+  ✨ Generated from Field `Project`.`numberOfTowers_min` of type `Int`
+  """
+  numberOfTowers_min: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingFourBhk_min` of type `Int`
+  """
+  pricingFourBhk_min: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingThreeBhk_min` of type `Int`
+  """
+  pricingThreeBhk_min: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingTwoBhk_min` of type `Int`
+  """
+  pricingTwoBhk_min: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`sftCostingPerSqft_min` of type `Int`
+  """
+  sftCostingPerSqft_min: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`totalUnits_min` of type `Int`
+  """
+  totalUnits_min: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`updatedAt_min` of type `Timestamp`
+  """
+  updatedAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `Project`.`availableUnits_max` of type `Int`
+  """
+  availableUnits_max: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: Timestamp_Filter
+  """
+  ✨ Generated from Field `Project`.`landParcel_max` of type `Float`
+  """
+  landParcel_max: Float_Filter
+  """
+  ✨ Generated from Field `Project`.`numberOfTowers_max` of type `Int`
+  """
+  numberOfTowers_max: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingFourBhk_max` of type `Int`
+  """
+  pricingFourBhk_max: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingThreeBhk_max` of type `Int`
+  """
+  pricingThreeBhk_max: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`pricingTwoBhk_max` of type `Int`
+  """
+  pricingTwoBhk_max: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`sftCostingPerSqft_max` of type `Int`
+  """
+  sftCostingPerSqft_max: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`totalUnits_max` of type `Int`
+  """
+  totalUnits_max: Int_Filter
+  """
+  ✨ Generated from Field `Project`.`updatedAt_max` of type `Timestamp`
+  """
+  updatedAt_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'Project'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input Project_Key {
+  """
+  ✨ Generated from Field `Project`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Project`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'Project'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input Project_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: Project_Filter
+}
+"""
+✨ Generated order input type for table 'Project'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input Project_Order {
+  """
+  ✨ Generated from Field `Project`.`id` of type `UUID!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`address` of type `String`
+  """
+  address: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`area` of type `String`
+  """
+  area: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`availableUnits` of type `Int`
+  """
+  availableUnits: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`brochureLink` of type `String`
+  """
+  brochureLink: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`city` of type `String!`
+  """
+  city: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`createdBy` of type `String`
+  """
+  createdBy: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`density` of type `DensityType`
+  """
+  density: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`details` of type `String`
+  """
+  details: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`developerName` of type `String!`
+  """
+  developerName: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`emiStartsFrom` of type `String`
+  """
+  emiStartsFrom: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`landParcel` of type `Float`
+  """
+  landParcel: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`landmark` of type `String`
+  """
+  landmark: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`leadRegistrationStatus` of type `String`
+  """
+  leadRegistrationStatus: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`location` of type `String`
+  """
+  location: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`mapLink` of type `String`
+  """
+  mapLink: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`name` of type `String!`
+  """
+  name: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`numberOfTowers` of type `Int`
+  """
+  numberOfTowers: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`onboardingAgreementLink` of type `String`
+  """
+  onboardingAgreementLink: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pincode` of type `String`
+  """
+  pincode: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`possessionDate` of type `String`
+  """
+  possessionDate: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`possessionStatus` of type `PossessionStatus`
+  """
+  possessionStatus: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingFourBhk` of type `Int`
+  """
+  pricingFourBhk: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingThreeBhk` of type `Int`
+  """
+  pricingThreeBhk: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingTwoBhk` of type `Int`
+  """
+  pricingTwoBhk: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`projectManagerContact` of type `String`
+  """
+  projectManagerContact: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`projectManagerName` of type `String`
+  """
+  projectManagerName: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`projectSegment` of type `ProjectSegment`
+  """
+  projectSegment: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`projectType` of type `ProjectType`
+  """
+  projectType: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`propertyType` of type `PropertyType!`
+  """
+  propertyType: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`reraNumber` of type `String`
+  """
+  reraNumber: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`sftCostingPerSqft` of type `Int`
+  """
+  sftCostingPerSqft: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`spocContact` of type `String`
+  """
+  spocContact: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`spocName` of type `String`
+  """
+  spocName: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`state` of type `String`
+  """
+  state: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`status` of type `ProjectStatus!`
+  """
+  status: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`teaser` of type `String`
+  """
+  teaser: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`totalUnits` of type `Int`
+  """
+  totalUnits: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`uniqueId` of type `String!`
+  """
+  uniqueId: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`updatedAt` of type `Timestamp`
+  """
+  updatedAt: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`updatedBy` of type `String`
+  """
+  updatedBy: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`usp` of type `String`
+  """
+  usp: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`videoLink3D` of type `String`
+  """
+  videoLink3D: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`zone` of type `ProjectZone`
+  """
+  zone: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`address_count` of type `Int!`
+  """
+  address_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`area_count` of type `Int!`
+  """
+  area_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`availableUnits_count` of type `Int!`
+  """
+  availableUnits_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`brochureLink_count` of type `Int!`
+  """
+  brochureLink_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`city_count` of type `Int!`
+  """
+  city_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`createdBy_count` of type `Int!`
+  """
+  createdBy_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`density_count` of type `Int!`
+  """
+  density_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`details_count` of type `Int!`
+  """
+  details_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`developerName_count` of type `Int!`
+  """
+  developerName_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`emiStartsFrom_count` of type `Int!`
+  """
+  emiStartsFrom_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`landParcel_count` of type `Int!`
+  """
+  landParcel_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`landmark_count` of type `Int!`
+  """
+  landmark_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`leadRegistrationStatus_count` of type `Int!`
+  """
+  leadRegistrationStatus_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`location_count` of type `Int!`
+  """
+  location_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`mapLink_count` of type `Int!`
+  """
+  mapLink_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`name_count` of type `Int!`
+  """
+  name_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`numberOfTowers_count` of type `Int!`
+  """
+  numberOfTowers_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`onboardingAgreementLink_count` of type `Int!`
+  """
+  onboardingAgreementLink_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pincode_count` of type `Int!`
+  """
+  pincode_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`possessionDate_count` of type `Int!`
+  """
+  possessionDate_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`possessionStatus_count` of type `Int!`
+  """
+  possessionStatus_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingFourBhk_count` of type `Int!`
+  """
+  pricingFourBhk_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingThreeBhk_count` of type `Int!`
+  """
+  pricingThreeBhk_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingTwoBhk_count` of type `Int!`
+  """
+  pricingTwoBhk_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`projectManagerContact_count` of type `Int!`
+  """
+  projectManagerContact_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`projectManagerName_count` of type `Int!`
+  """
+  projectManagerName_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`projectSegment_count` of type `Int!`
+  """
+  projectSegment_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`projectType_count` of type `Int!`
+  """
+  projectType_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`propertyType_count` of type `Int!`
+  """
+  propertyType_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`reraNumber_count` of type `Int!`
+  """
+  reraNumber_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`sftCostingPerSqft_count` of type `Int!`
+  """
+  sftCostingPerSqft_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`spocContact_count` of type `Int!`
+  """
+  spocContact_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`spocName_count` of type `Int!`
+  """
+  spocName_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`state_count` of type `Int!`
+  """
+  state_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`status_count` of type `Int!`
+  """
+  status_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`teaser_count` of type `Int!`
+  """
+  teaser_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`totalUnits_count` of type `Int!`
+  """
+  totalUnits_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`uniqueId_count` of type `Int!`
+  """
+  uniqueId_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`updatedAt_count` of type `Int!`
+  """
+  updatedAt_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`updatedBy_count` of type `Int!`
+  """
+  updatedBy_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`usp_count` of type `Int!`
+  """
+  usp_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`videoLink3D_count` of type `Int!`
+  """
+  videoLink3D_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`zone_count` of type `Int!`
+  """
+  zone_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`availableUnits_sum` of type `Int`
+  """
+  availableUnits_sum: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`landParcel_sum` of type `Float`
+  """
+  landParcel_sum: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`numberOfTowers_sum` of type `Int`
+  """
+  numberOfTowers_sum: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingFourBhk_sum` of type `Int`
+  """
+  pricingFourBhk_sum: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingThreeBhk_sum` of type `Int`
+  """
+  pricingThreeBhk_sum: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingTwoBhk_sum` of type `Int`
+  """
+  pricingTwoBhk_sum: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`sftCostingPerSqft_sum` of type `Int`
+  """
+  sftCostingPerSqft_sum: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`totalUnits_sum` of type `Int`
+  """
+  totalUnits_sum: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`availableUnits_avg` of type `Float`
+  """
+  availableUnits_avg: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`landParcel_avg` of type `Float`
+  """
+  landParcel_avg: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`numberOfTowers_avg` of type `Float`
+  """
+  numberOfTowers_avg: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingFourBhk_avg` of type `Float`
+  """
+  pricingFourBhk_avg: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingThreeBhk_avg` of type `Float`
+  """
+  pricingThreeBhk_avg: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingTwoBhk_avg` of type `Float`
+  """
+  pricingTwoBhk_avg: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`sftCostingPerSqft_avg` of type `Float`
+  """
+  sftCostingPerSqft_avg: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`totalUnits_avg` of type `Float`
+  """
+  totalUnits_avg: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`availableUnits_min` of type `Int`
+  """
+  availableUnits_min: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`landParcel_min` of type `Float`
+  """
+  landParcel_min: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`numberOfTowers_min` of type `Int`
+  """
+  numberOfTowers_min: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingFourBhk_min` of type `Int`
+  """
+  pricingFourBhk_min: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingThreeBhk_min` of type `Int`
+  """
+  pricingThreeBhk_min: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingTwoBhk_min` of type `Int`
+  """
+  pricingTwoBhk_min: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`sftCostingPerSqft_min` of type `Int`
+  """
+  sftCostingPerSqft_min: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`totalUnits_min` of type `Int`
+  """
+  totalUnits_min: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`updatedAt_min` of type `Timestamp`
+  """
+  updatedAt_min: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`availableUnits_max` of type `Int`
+  """
+  availableUnits_max: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`landParcel_max` of type `Float`
+  """
+  landParcel_max: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`numberOfTowers_max` of type `Int`
+  """
+  numberOfTowers_max: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingFourBhk_max` of type `Int`
+  """
+  pricingFourBhk_max: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingThreeBhk_max` of type `Int`
+  """
+  pricingThreeBhk_max: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`pricingTwoBhk_max` of type `Int`
+  """
+  pricingTwoBhk_max: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`sftCostingPerSqft_max` of type `Int`
+  """
+  sftCostingPerSqft_max: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`totalUnits_max` of type `Int`
+  """
+  totalUnits_max: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`updatedAt_max` of type `Timestamp`
+  """
+  updatedAt_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'ProjectAmenity'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input ProjectAmenity_Data {
+  """
+  ✨ Generated from Field `ProjectAmenity`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `ProjectAmenity`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `ProjectAmenity`.`projectId` of type `UUID!`
+  """
+  projectId: UUID
+  """
+  ✨ `_expr` server value variant of `projectId` (✨ Generated from Field `ProjectAmenity`.`projectId` of type `UUID!`)
+  """
+  projectId_expr: UUID_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `ProjectAmenity`.`project` of type `Project!`
+  """
+  project: Project_Key @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `ProjectAmenity`.`amenity` of type `String!`
+  """
+  amenity: String
+  """
+  ✨ `_expr` server value variant of `amenity` (✨ Generated from Field `ProjectAmenity`.`amenity` of type `String!`)
+  """
+  amenity_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated filter input type for table 'ProjectAmenity'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input ProjectAmenity_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [ProjectAmenity_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: ProjectAmenity_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [ProjectAmenity_Filter!]
+  """
+  ✨ Generated from Field `ProjectAmenity`.`id` of type `UUID!`
+  """
+  id: UUID_Filter
+  """
+  ✨ Generated from Field `ProjectAmenity`.`projectId` of type `UUID!`
+  """
+  projectId: UUID_Filter
+  """
+  ✨ Generated from Field `ProjectAmenity`.`project` of type `Project!`
+  """
+  project: Project_Filter
+  """
+  ✨ Generated from Field `ProjectAmenity`.`amenity` of type `String!`
+  """
+  amenity: String_Filter
+}
+"""
+✨ Generated first-row input type for table 'ProjectAmenity'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input ProjectAmenity_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [ProjectAmenity_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: ProjectAmenity_Filter
+}
+"""
+✨ Generated having input type for table 'ProjectAmenity'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input ProjectAmenity_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [ProjectAmenity_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: ProjectAmenity_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [ProjectAmenity_Having!]
+  """
+  ✨ Generated from Field `ProjectAmenity`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `ProjectAmenity`.`amenity_count` of type `Int!`
+  """
+  amenity_count: Int_Filter
+  """
+  ✨ Generated from Field `ProjectAmenity`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `ProjectAmenity`.`projectId_count` of type `Int!`
+  """
+  projectId_count: Int_Filter
+}
+"""
+✨ Generated key input type for table 'ProjectAmenity'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input ProjectAmenity_Key {
+  """
+  ✨ Generated from Field `ProjectAmenity`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `ProjectAmenity`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'ProjectAmenity'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input ProjectAmenity_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: ProjectAmenity_Filter
+}
+"""
+✨ Generated order input type for table 'ProjectAmenity'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input ProjectAmenity_Order {
+  """
+  ✨ Generated from Field `ProjectAmenity`.`id` of type `UUID!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `ProjectAmenity`.`projectId` of type `UUID!`
+  """
+  projectId: OrderDirection
+  """
+  ✨ Generated from Field `ProjectAmenity`.`project` of type `Project!`
+  """
+  project: Project_Order
+  """
+  ✨ Generated from Field `ProjectAmenity`.`amenity` of type `String!`
+  """
+  amenity: OrderDirection
+  """
+  ✨ Generated from Field `ProjectAmenity`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `ProjectAmenity`.`amenity_count` of type `Int!`
+  """
+  amenity_count: OrderDirection
+  """
+  ✨ Generated from Field `ProjectAmenity`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `ProjectAmenity`.`projectId_count` of type `Int!`
+  """
+  projectId_count: OrderDirection
+}
+"""
+✨ Generated data input type for table 'ProjectPhoto'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input ProjectPhoto_Data {
+  """
+  ✨ Generated from Field `ProjectPhoto`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `ProjectPhoto`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `ProjectPhoto`.`projectId` of type `UUID!`
+  """
+  projectId: UUID
+  """
+  ✨ `_expr` server value variant of `projectId` (✨ Generated from Field `ProjectPhoto`.`projectId` of type `UUID!`)
+  """
+  projectId_expr: UUID_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `ProjectPhoto`.`project` of type `Project!`
+  """
+  project: Project_Key @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `ProjectPhoto`.`displayOrder` of type `Int!`
+  """
+  displayOrder: Int
+  """
+  ✨ `_expr` server value variant of `displayOrder` (✨ Generated from Field `ProjectPhoto`.`displayOrder` of type `Int!`)
+  """
+  displayOrder_expr: Int_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `displayOrder` (✨ Generated from Field `ProjectPhoto`.`displayOrder` of type `Int!`)
+  """
+  displayOrder_update: [Int_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `ProjectPhoto`.`url` of type `String!`
+  """
+  url: String
+  """
+  ✨ `_expr` server value variant of `url` (✨ Generated from Field `ProjectPhoto`.`url` of type `String!`)
+  """
+  url_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated filter input type for table 'ProjectPhoto'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input ProjectPhoto_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [ProjectPhoto_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: ProjectPhoto_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [ProjectPhoto_Filter!]
+  """
+  ✨ Generated from Field `ProjectPhoto`.`id` of type `UUID!`
+  """
+  id: UUID_Filter
+  """
+  ✨ Generated from Field `ProjectPhoto`.`projectId` of type `UUID!`
+  """
+  projectId: UUID_Filter
+  """
+  ✨ Generated from Field `ProjectPhoto`.`project` of type `Project!`
+  """
+  project: Project_Filter
+  """
+  ✨ Generated from Field `ProjectPhoto`.`displayOrder` of type `Int!`
+  """
+  displayOrder: Int_Filter
+  """
+  ✨ Generated from Field `ProjectPhoto`.`url` of type `String!`
+  """
+  url: String_Filter
+}
+"""
+✨ Generated first-row input type for table 'ProjectPhoto'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input ProjectPhoto_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [ProjectPhoto_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: ProjectPhoto_Filter
+}
+"""
+✨ Generated having input type for table 'ProjectPhoto'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input ProjectPhoto_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [ProjectPhoto_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: ProjectPhoto_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [ProjectPhoto_Having!]
+  """
+  ✨ Generated from Field `ProjectPhoto`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `ProjectPhoto`.`displayOrder_count` of type `Int!`
+  """
+  displayOrder_count: Int_Filter
+  """
+  ✨ Generated from Field `ProjectPhoto`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `ProjectPhoto`.`projectId_count` of type `Int!`
+  """
+  projectId_count: Int_Filter
+  """
+  ✨ Generated from Field `ProjectPhoto`.`url_count` of type `Int!`
+  """
+  url_count: Int_Filter
+  """
+  ✨ Generated from Field `ProjectPhoto`.`displayOrder_sum` of type `Int`
+  """
+  displayOrder_sum: Int_Filter
+  """
+  ✨ Generated from Field `ProjectPhoto`.`displayOrder_avg` of type `Float`
+  """
+  displayOrder_avg: Float_Filter
+  """
+  ✨ Generated from Field `ProjectPhoto`.`displayOrder_min` of type `Int`
+  """
+  displayOrder_min: Int_Filter
+  """
+  ✨ Generated from Field `ProjectPhoto`.`displayOrder_max` of type `Int`
+  """
+  displayOrder_max: Int_Filter
+}
+"""
+✨ Generated key input type for table 'ProjectPhoto'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input ProjectPhoto_Key {
+  """
+  ✨ Generated from Field `ProjectPhoto`.`id` of type `UUID!`
+  """
+  id: UUID
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `ProjectPhoto`.`id` of type `UUID!`)
+  """
+  id_expr: UUID_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'ProjectPhoto'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input ProjectPhoto_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: ProjectPhoto_Filter
+}
+"""
+✨ Generated order input type for table 'ProjectPhoto'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input ProjectPhoto_Order {
+  """
+  ✨ Generated from Field `ProjectPhoto`.`id` of type `UUID!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `ProjectPhoto`.`projectId` of type `UUID!`
+  """
+  projectId: OrderDirection
+  """
+  ✨ Generated from Field `ProjectPhoto`.`project` of type `Project!`
+  """
+  project: Project_Order
+  """
+  ✨ Generated from Field `ProjectPhoto`.`displayOrder` of type `Int!`
+  """
+  displayOrder: OrderDirection
+  """
+  ✨ Generated from Field `ProjectPhoto`.`url` of type `String!`
+  """
+  url: OrderDirection
+  """
+  ✨ Generated from Field `ProjectPhoto`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `ProjectPhoto`.`displayOrder_count` of type `Int!`
+  """
+  displayOrder_count: OrderDirection
+  """
+  ✨ Generated from Field `ProjectPhoto`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `ProjectPhoto`.`projectId_count` of type `Int!`
+  """
+  projectId_count: OrderDirection
+  """
+  ✨ Generated from Field `ProjectPhoto`.`url_count` of type `Int!`
+  """
+  url_count: OrderDirection
+  """
+  ✨ Generated from Field `ProjectPhoto`.`displayOrder_sum` of type `Int`
+  """
+  displayOrder_sum: OrderDirection
+  """
+  ✨ Generated from Field `ProjectPhoto`.`displayOrder_avg` of type `Float`
+  """
+  displayOrder_avg: OrderDirection
+  """
+  ✨ Generated from Field `ProjectPhoto`.`displayOrder_min` of type `Int`
+  """
+  displayOrder_min: OrderDirection
+  """
+  ✨ Generated from Field `ProjectPhoto`.`displayOrder_max` of type `Int`
+  """
+  displayOrder_max: OrderDirection
+}
+"""
+✨ Generated filter input type for table 'ProjectSegment'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input ProjectSegment_Filter {
+  """
+  Match if field is exactly equal to provided value.
+  """
+  eq: ProjectSegment
+  """
+  ✨ `_expr` server value variant of `eq` (Match if field is exactly equal to provided value.)
+  """
+  eq_expr: ProjectSegment_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is not equal to provided value.
+  """
+  ne: ProjectSegment
+  """
+  ✨ `_expr` server value variant of `ne` (Match if field is not equal to provided value.)
+  """
+  ne_expr: ProjectSegment_Expr @fdc_forbiddenInVariables
+  """
+  When true, match if field `IS NULL`. When false, match if field is `NOT NULL`.
+  """
+  isNull: Boolean
+  """
+  Match if field value is among the provided list of values.
+  """
+  in: [ProjectSegment!]
+  """
+  Match if field value is not among the provided list of values.
+  """
+  nin: [ProjectSegment!]
+  """
+  Match if field value is greater than the provided value, based on index ordering of supported enum values.
+  """
+  gt: ProjectSegment
+  """
+  ✨ `_expr` server value variant of `gt` (Match if field value is greater than the provided value, based on index ordering of supported enum values.)
+  """
+  gt_expr: ProjectSegment_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is greater than or equal to the provided value.
+  """
+  ge: ProjectSegment
+  """
+  ✨ `_expr` server value variant of `ge` (Match if field is greater than or equal to the provided value.)
+  """
+  ge_expr: ProjectSegment_Expr @fdc_forbiddenInVariables
+  """
+  Match if field value is less than the provided value, based on index ordering of supported enum values.
+  """
+  lt: ProjectSegment
+  """
+  ✨ `_expr` server value variant of `lt` (Match if field value is less than the provided value, based on index ordering of supported enum values.)
+  """
+  lt_expr: ProjectSegment_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is less than or equal to the provided value, based on index ordering of supported enum values.
+  """
+  le: ProjectSegment
+  """
+  ✨ `_expr` server value variant of `le` (Match if field is less than or equal to the provided value, based on index ordering of supported enum values.)
+  """
+  le_expr: ProjectSegment_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'ProjectSegment'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input ProjectSegment_ListFilter {
+  """
+  Match if list field contains the provided value as a member.
+  """
+  includes: ProjectSegment
+  """
+  ✨ `_expr` server value variant of `includes` (Match if list field contains the provided value as a member.)
+  """
+  includes_expr: ProjectSegment_Expr @fdc_forbiddenInVariables
+  """
+  Match if list field contains all of the provided values as members.
+  """
+  includesAll: [ProjectSegment!]
+  """
+  Match if list field does not contain the provided value as a member.
+  """
+  excludes: ProjectSegment
+  """
+  ✨ `_expr` server value variant of `excludes` (Match if list field does not contain the provided value as a member.)
+  """
+  excludes_expr: ProjectSegment_Expr @fdc_forbiddenInVariables
+  """
+  Match if list field does not contain any of the provided values as members.
+  """
+  excludesAll: [ProjectSegment!]
+  """
+  The desired number of enum values that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: ProjectSegment_Filter
+}
+"""
+✨ Generated filter input type for table 'ProjectStatus'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input ProjectStatus_Filter {
+  """
+  Match if field is exactly equal to provided value.
+  """
+  eq: ProjectStatus
+  """
+  ✨ `_expr` server value variant of `eq` (Match if field is exactly equal to provided value.)
+  """
+  eq_expr: ProjectStatus_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is not equal to provided value.
+  """
+  ne: ProjectStatus
+  """
+  ✨ `_expr` server value variant of `ne` (Match if field is not equal to provided value.)
+  """
+  ne_expr: ProjectStatus_Expr @fdc_forbiddenInVariables
+  """
+  When true, match if field `IS NULL`. When false, match if field is `NOT NULL`.
+  """
+  isNull: Boolean
+  """
+  Match if field value is among the provided list of values.
+  """
+  in: [ProjectStatus!]
+  """
+  Match if field value is not among the provided list of values.
+  """
+  nin: [ProjectStatus!]
+  """
+  Match if field value is greater than the provided value, based on index ordering of supported enum values.
+  """
+  gt: ProjectStatus
+  """
+  ✨ `_expr` server value variant of `gt` (Match if field value is greater than the provided value, based on index ordering of supported enum values.)
+  """
+  gt_expr: ProjectStatus_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is greater than or equal to the provided value.
+  """
+  ge: ProjectStatus
+  """
+  ✨ `_expr` server value variant of `ge` (Match if field is greater than or equal to the provided value.)
+  """
+  ge_expr: ProjectStatus_Expr @fdc_forbiddenInVariables
+  """
+  Match if field value is less than the provided value, based on index ordering of supported enum values.
+  """
+  lt: ProjectStatus
+  """
+  ✨ `_expr` server value variant of `lt` (Match if field value is less than the provided value, based on index ordering of supported enum values.)
+  """
+  lt_expr: ProjectStatus_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is less than or equal to the provided value, based on index ordering of supported enum values.
+  """
+  le: ProjectStatus
+  """
+  ✨ `_expr` server value variant of `le` (Match if field is less than or equal to the provided value, based on index ordering of supported enum values.)
+  """
+  le_expr: ProjectStatus_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'ProjectStatus'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input ProjectStatus_ListFilter {
+  """
+  Match if list field contains the provided value as a member.
+  """
+  includes: ProjectStatus
+  """
+  ✨ `_expr` server value variant of `includes` (Match if list field contains the provided value as a member.)
+  """
+  includes_expr: ProjectStatus_Expr @fdc_forbiddenInVariables
+  """
+  Match if list field contains all of the provided values as members.
+  """
+  includesAll: [ProjectStatus!]
+  """
+  Match if list field does not contain the provided value as a member.
+  """
+  excludes: ProjectStatus
+  """
+  ✨ `_expr` server value variant of `excludes` (Match if list field does not contain the provided value as a member.)
+  """
+  excludes_expr: ProjectStatus_Expr @fdc_forbiddenInVariables
+  """
+  Match if list field does not contain any of the provided values as members.
+  """
+  excludesAll: [ProjectStatus!]
+  """
+  The desired number of enum values that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: ProjectStatus_Filter
+}
+"""
+✨ Generated filter input type for table 'ProjectType'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input ProjectType_Filter {
+  """
+  Match if field is exactly equal to provided value.
+  """
+  eq: ProjectType
+  """
+  ✨ `_expr` server value variant of `eq` (Match if field is exactly equal to provided value.)
+  """
+  eq_expr: ProjectType_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is not equal to provided value.
+  """
+  ne: ProjectType
+  """
+  ✨ `_expr` server value variant of `ne` (Match if field is not equal to provided value.)
+  """
+  ne_expr: ProjectType_Expr @fdc_forbiddenInVariables
+  """
+  When true, match if field `IS NULL`. When false, match if field is `NOT NULL`.
+  """
+  isNull: Boolean
+  """
+  Match if field value is among the provided list of values.
+  """
+  in: [ProjectType!]
+  """
+  Match if field value is not among the provided list of values.
+  """
+  nin: [ProjectType!]
+  """
+  Match if field value is greater than the provided value, based on index ordering of supported enum values.
+  """
+  gt: ProjectType
+  """
+  ✨ `_expr` server value variant of `gt` (Match if field value is greater than the provided value, based on index ordering of supported enum values.)
+  """
+  gt_expr: ProjectType_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is greater than or equal to the provided value.
+  """
+  ge: ProjectType
+  """
+  ✨ `_expr` server value variant of `ge` (Match if field is greater than or equal to the provided value.)
+  """
+  ge_expr: ProjectType_Expr @fdc_forbiddenInVariables
+  """
+  Match if field value is less than the provided value, based on index ordering of supported enum values.
+  """
+  lt: ProjectType
+  """
+  ✨ `_expr` server value variant of `lt` (Match if field value is less than the provided value, based on index ordering of supported enum values.)
+  """
+  lt_expr: ProjectType_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is less than or equal to the provided value, based on index ordering of supported enum values.
+  """
+  le: ProjectType
+  """
+  ✨ `_expr` server value variant of `le` (Match if field is less than or equal to the provided value, based on index ordering of supported enum values.)
+  """
+  le_expr: ProjectType_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'ProjectType'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input ProjectType_ListFilter {
+  """
+  Match if list field contains the provided value as a member.
+  """
+  includes: ProjectType
+  """
+  ✨ `_expr` server value variant of `includes` (Match if list field contains the provided value as a member.)
+  """
+  includes_expr: ProjectType_Expr @fdc_forbiddenInVariables
+  """
+  Match if list field contains all of the provided values as members.
+  """
+  includesAll: [ProjectType!]
+  """
+  Match if list field does not contain the provided value as a member.
+  """
+  excludes: ProjectType
+  """
+  ✨ `_expr` server value variant of `excludes` (Match if list field does not contain the provided value as a member.)
+  """
+  excludes_expr: ProjectType_Expr @fdc_forbiddenInVariables
+  """
+  Match if list field does not contain any of the provided values as members.
+  """
+  excludesAll: [ProjectType!]
+  """
+  The desired number of enum values that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: ProjectType_Filter
+}
+"""
+✨ Generated filter input type for table 'ProjectZone'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input ProjectZone_Filter {
+  """
+  Match if field is exactly equal to provided value.
+  """
+  eq: ProjectZone
+  """
+  ✨ `_expr` server value variant of `eq` (Match if field is exactly equal to provided value.)
+  """
+  eq_expr: ProjectZone_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is not equal to provided value.
+  """
+  ne: ProjectZone
+  """
+  ✨ `_expr` server value variant of `ne` (Match if field is not equal to provided value.)
+  """
+  ne_expr: ProjectZone_Expr @fdc_forbiddenInVariables
+  """
+  When true, match if field `IS NULL`. When false, match if field is `NOT NULL`.
+  """
+  isNull: Boolean
+  """
+  Match if field value is among the provided list of values.
+  """
+  in: [ProjectZone!]
+  """
+  Match if field value is not among the provided list of values.
+  """
+  nin: [ProjectZone!]
+  """
+  Match if field value is greater than the provided value, based on index ordering of supported enum values.
+  """
+  gt: ProjectZone
+  """
+  ✨ `_expr` server value variant of `gt` (Match if field value is greater than the provided value, based on index ordering of supported enum values.)
+  """
+  gt_expr: ProjectZone_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is greater than or equal to the provided value.
+  """
+  ge: ProjectZone
+  """
+  ✨ `_expr` server value variant of `ge` (Match if field is greater than or equal to the provided value.)
+  """
+  ge_expr: ProjectZone_Expr @fdc_forbiddenInVariables
+  """
+  Match if field value is less than the provided value, based on index ordering of supported enum values.
+  """
+  lt: ProjectZone
+  """
+  ✨ `_expr` server value variant of `lt` (Match if field value is less than the provided value, based on index ordering of supported enum values.)
+  """
+  lt_expr: ProjectZone_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is less than or equal to the provided value, based on index ordering of supported enum values.
+  """
+  le: ProjectZone
+  """
+  ✨ `_expr` server value variant of `le` (Match if field is less than or equal to the provided value, based on index ordering of supported enum values.)
+  """
+  le_expr: ProjectZone_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'ProjectZone'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input ProjectZone_ListFilter {
+  """
+  Match if list field contains the provided value as a member.
+  """
+  includes: ProjectZone
+  """
+  ✨ `_expr` server value variant of `includes` (Match if list field contains the provided value as a member.)
+  """
+  includes_expr: ProjectZone_Expr @fdc_forbiddenInVariables
+  """
+  Match if list field contains all of the provided values as members.
+  """
+  includesAll: [ProjectZone!]
+  """
+  Match if list field does not contain the provided value as a member.
+  """
+  excludes: ProjectZone
+  """
+  ✨ `_expr` server value variant of `excludes` (Match if list field does not contain the provided value as a member.)
+  """
+  excludes_expr: ProjectZone_Expr @fdc_forbiddenInVariables
+  """
+  Match if list field does not contain any of the provided values as members.
+  """
+  excludesAll: [ProjectZone!]
+  """
+  The desired number of enum values that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: ProjectZone_Filter
+}
+"""
+✨ Generated filter input type for table 'PropertyType'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input PropertyType_Filter {
+  """
+  Match if field is exactly equal to provided value.
+  """
+  eq: PropertyType
+  """
+  ✨ `_expr` server value variant of `eq` (Match if field is exactly equal to provided value.)
+  """
+  eq_expr: PropertyType_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is not equal to provided value.
+  """
+  ne: PropertyType
+  """
+  ✨ `_expr` server value variant of `ne` (Match if field is not equal to provided value.)
+  """
+  ne_expr: PropertyType_Expr @fdc_forbiddenInVariables
+  """
+  When true, match if field `IS NULL`. When false, match if field is `NOT NULL`.
+  """
+  isNull: Boolean
+  """
+  Match if field value is among the provided list of values.
+  """
+  in: [PropertyType!]
+  """
+  Match if field value is not among the provided list of values.
+  """
+  nin: [PropertyType!]
+  """
+  Match if field value is greater than the provided value, based on index ordering of supported enum values.
+  """
+  gt: PropertyType
+  """
+  ✨ `_expr` server value variant of `gt` (Match if field value is greater than the provided value, based on index ordering of supported enum values.)
+  """
+  gt_expr: PropertyType_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is greater than or equal to the provided value.
+  """
+  ge: PropertyType
+  """
+  ✨ `_expr` server value variant of `ge` (Match if field is greater than or equal to the provided value.)
+  """
+  ge_expr: PropertyType_Expr @fdc_forbiddenInVariables
+  """
+  Match if field value is less than the provided value, based on index ordering of supported enum values.
+  """
+  lt: PropertyType
+  """
+  ✨ `_expr` server value variant of `lt` (Match if field value is less than the provided value, based on index ordering of supported enum values.)
+  """
+  lt_expr: PropertyType_Expr @fdc_forbiddenInVariables
+  """
+  Match if field is less than or equal to the provided value, based on index ordering of supported enum values.
+  """
+  le: PropertyType
+  """
+  ✨ `_expr` server value variant of `le` (Match if field is less than or equal to the provided value, based on index ordering of supported enum values.)
+  """
+  le_expr: PropertyType_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'PropertyType'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input PropertyType_ListFilter {
+  """
+  Match if list field contains the provided value as a member.
+  """
+  includes: PropertyType
+  """
+  ✨ `_expr` server value variant of `includes` (Match if list field contains the provided value as a member.)
+  """
+  includes_expr: PropertyType_Expr @fdc_forbiddenInVariables
+  """
+  Match if list field contains all of the provided values as members.
+  """
+  includesAll: [PropertyType!]
+  """
+  Match if list field does not contain the provided value as a member.
+  """
+  excludes: PropertyType
+  """
+  ✨ `_expr` server value variant of `excludes` (Match if list field does not contain the provided value as a member.)
+  """
+  excludes_expr: PropertyType_Expr @fdc_forbiddenInVariables
+  """
+  Match if list field does not contain any of the provided values as members.
+  """
+  excludesAll: [PropertyType!]
+  """
+  The desired number of enum values that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: PropertyType_Filter
+}
