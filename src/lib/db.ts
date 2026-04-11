@@ -19,9 +19,9 @@ async function getPool(): Promise<Pool> {
 
   _pool = new Pool({
     ...clientOpts,
-    database: process.env.DB_NAME ?? "howzy-api-database",
+    database: process.env.DB_NAME,
     // IAM user format: SA email without the .gserviceaccount.com suffix
-    user: process.env.DB_USER ?? "923565373621-compute@developer",
+    user: process.env.DB_USER,
     max: 10,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,
