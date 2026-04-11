@@ -77,7 +77,7 @@ export interface ProjectRow {
 export interface ConfigurationRow {
   id: string;
   project_id: string;
-  bhk_type: BhkType;
+  bhk_count: number;
   min_sft: number;
   max_sft: number;
   unit_count: number;
@@ -99,7 +99,7 @@ export interface ProjectAmenityRow {
 // Camel-case API response shape
 export interface ConfigurationResponse {
   id: string;
-  bhkType: BhkType;
+  bhkType: number;
   minSft: number;
   maxSft: number;
   unitCount: number;

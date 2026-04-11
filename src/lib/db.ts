@@ -12,16 +12,16 @@ async function getPool(): Promise<Pool> {
   // Use IAM authentication — no password required when running inside Cloud Functions
   // (the runtime service account is auto-authenticated via ADC)
   const clientOpts = await _connector.getOptions({
-    instanceConnectionName: process.env.CLOUD_SQL_INSTANCE!,
+    instanceConnectionName: process.env.CLOUD_SQL_INSTANCE!.trim(),
     ipType: IpAddressTypes.PUBLIC,
     authType: AuthTypes.IAM,
   });
 
   _pool = new Pool({
     ...clientOpts,
-    database: process.env.DB_NAME,
+    database: process.env.DB_NAME?.trim(),
     // IAM user format: SA email without the .gserviceaccount.com suffix
-    user: process.env.DB_USER,
+    user: process.env.DB_USER?.trim(),
     max: 10,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,
