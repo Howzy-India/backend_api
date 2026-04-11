@@ -247,6 +247,31 @@ const handleAdminUserApiError = (
   res.status(500).json({ error: `Failed to ${action}` });
 };
 
+/** Normalize a phone string to E.164, also return raw digits and pendingId. */
+const parsePhone = (phone: unknown): { digits: string; normalizedPhone: string; pendingId: string } | null => {
+  const digits = String(phone ?? "").replace(/\D/g, "");
+  if (!digits) return null;
+  const normalizedPhone = digits.length === 10 ? `+91${digits}` : `+${digits}`;
+  if (!/^\+\d{10,15}$/.test(normalizedPhone)) return null;
+  const pendingId = `pending_${digits.length === 10 ? `91${digits}` : digits}`;
+  return { digits, normalizedPhone, pendingId };
+};
+
+/** Check if a phone number already exists (pending doc or Firebase Auth user). */
+const checkPhoneConflict = async (pendingId: string, normalizedPhone: string): Promise<string | null> => {
+  const [pendingSnap, existingFirebaseUser] = await Promise.allSettled([
+    collections.users.doc(pendingId).get(),
+    auth.getUserByPhoneNumber(normalizedPhone),
+  ]);
+  if (pendingSnap.status === "fulfilled" && pendingSnap.value.exists) {
+    return "A user with this phone number already exists";
+  }
+  if (existingFirebaseUser.status === "fulfilled") {
+    return "A user with this phone number already exists in the system";
+  }
+  return null;
+};
+
 // ── Health ────────────────────────────────────────────────────────────
 
 app.get("/health", async (_req, res) => {
@@ -944,30 +969,16 @@ app.post("/admin/users", requireAuth, requireRole("super_admin"), async (req, re
       return;
     }
 
-    // Normalize phone to E.164 — accept 10-digit Indian numbers or full E.164
-    const digits = String(phone).replace(/\D/g, "");
-    const normalizedPhone = digits.length === 10 ? `+91${digits}` : `+${digits}`;
-    if (!/^\+\d{10,15}$/.test(normalizedPhone)) {
+    const parsed = parsePhone(phone);
+    if (!parsed) {
       res.status(400).json({ error: "Invalid phone number format" });
       return;
     }
+    const { normalizedPhone, pendingId } = parsed;
 
-    const pendingId = `pending_${digits.length === 10 ? `91${digits}` : digits}`;
-
-    // Check if a pending or real user already exists with this phone
-    const [pendingSnap, existingFirebaseUser] = await Promise.allSettled([
-      collections.users.doc(pendingId).get(),
-      auth.getUserByPhoneNumber(normalizedPhone),
-    ]);
-
-    if (
-      pendingSnap.status === "fulfilled" && pendingSnap.value.exists
-    ) {
-      res.status(409).json({ error: "An admin user with this phone number already exists" });
-      return;
-    }
-    if (existingFirebaseUser.status === "fulfilled") {
-      res.status(409).json({ error: "A user with this phone number already exists in the system" });
+    const conflict = await checkPhoneConflict(pendingId, normalizedPhone);
+    if (conflict) {
+      res.status(409).json({ error: conflict });
       return;
     }
 
@@ -1088,26 +1099,16 @@ app.post("/admin/employees", requireAuth, requireRole("super_admin"), async (req
       return;
     }
 
-    const digits = String(phone).replace(/\D/g, "");
-    const normalizedPhone = digits.length === 10 ? `+91${digits}` : `+${digits}`;
-    if (!/^\+\d{10,15}$/.test(normalizedPhone)) {
+    const parsed = parsePhone(phone);
+    if (!parsed) {
       res.status(400).json({ error: "Invalid phone number format" });
       return;
     }
+    const { normalizedPhone, pendingId } = parsed;
 
-    const pendingId = `pending_${digits.length === 10 ? `91${digits}` : digits}`;
-
-    const [pendingSnap, existingFirebaseUser] = await Promise.allSettled([
-      collections.users.doc(pendingId).get(),
-      auth.getUserByPhoneNumber(normalizedPhone),
-    ]);
-
-    if (pendingSnap.status === "fulfilled" && pendingSnap.value.exists) {
-      res.status(409).json({ error: "An employee with this phone number already exists" });
-      return;
-    }
-    if (existingFirebaseUser.status === "fulfilled") {
-      res.status(409).json({ error: "A user with this phone number already exists in the system" });
+    const conflict = await checkPhoneConflict(pendingId, normalizedPhone);
+    if (conflict) {
+      res.status(409).json({ error: conflict });
       return;
     }
 
