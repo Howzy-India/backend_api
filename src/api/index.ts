@@ -289,6 +289,42 @@ const toUserListItem = (doc: FirebaseFirestore.QueryDocumentSnapshot) => {
   };
 };
 
+/** Validate phone, check conflicts, create a pending user doc, and send 201. Returns false if already responded with an error. */
+const createPendingUser = async (
+  params: { name: unknown; phone: unknown; role: string; email?: unknown; createdBy?: string },
+  res: express.Response
+): Promise<boolean> => {
+  const { name, phone, role, email, createdBy } = params;
+  if (!name || !phone) {
+    res.status(400).json({ error: "name and phone are required" });
+    return false;
+  }
+  const parsed = parsePhone(phone);
+  if (!parsed) {
+    res.status(400).json({ error: "Invalid phone number format" });
+    return false;
+  }
+  const { normalizedPhone, pendingId } = parsed;
+  const conflict = await checkPhoneConflict(pendingId, normalizedPhone);
+  if (conflict) {
+    res.status(409).json({ error: conflict });
+    return false;
+  }
+  const doc: Record<string, unknown> = {
+    name: String(name).trim(),
+    displayName: String(name).trim(),
+    phone: normalizedPhone,
+    role,
+    status: "active",
+    createdBy,
+    createdAt: FieldValue.serverTimestamp(),
+  };
+  if (email) doc.email = String(email).trim();
+  await collections.users.doc(pendingId).set(doc);
+  res.status(201).json({ success: true, pendingId, phone: normalizedPhone });
+  return true;
+};
+
 // ── Health ────────────────────────────────────────────────────────────
 
 app.get("/health", async (_req, res) => {
@@ -968,36 +1004,7 @@ app.get("/admin/users", requireAuth, requireRole("super_admin"), async (_req, re
 app.post("/admin/users", requireAuth, requireRole("super_admin"), async (req, res) => {
   try {
     const { name, phone, email } = req.body ?? {};
-    if (!name || !phone) {
-      res.status(400).json({ error: "name and phone are required" });
-      return;
-    }
-
-    const parsed = parsePhone(phone);
-    if (!parsed) {
-      res.status(400).json({ error: "Invalid phone number format" });
-      return;
-    }
-    const { normalizedPhone, pendingId } = parsed;
-
-    const conflict = await checkPhoneConflict(pendingId, normalizedPhone);
-    if (conflict) {
-      res.status(409).json({ error: conflict });
-      return;
-    }
-
-    await collections.users.doc(pendingId).set({
-      name: String(name).trim(),
-      displayName: String(name).trim(),
-      phone: normalizedPhone,
-      email: email ? String(email).trim() : null,
-      role: "admin",
-      status: "active",
-      createdBy: req.user?.uid,
-      createdAt: FieldValue.serverTimestamp(),
-    });
-
-    res.status(201).json({ success: true, pendingId, phone: normalizedPhone });
+    await createPendingUser({ name, phone, email, role: "admin", createdBy: req.user?.uid }, res);
   } catch (error) {
     console.error("Error creating admin user:", error);
     res.status(500).json({ error: "Failed to create admin user" });
@@ -1081,39 +1088,11 @@ app.get("/admin/employees", requireAuth, requireRole("super_admin"), async (_req
 app.post("/admin/employees", requireAuth, requireRole("super_admin"), async (req, res) => {
   try {
     const { name, phone, role } = req.body ?? {};
-    if (!name || !phone) {
-      res.status(400).json({ error: "name and phone are required" });
-      return;
-    }
     if (!isEmployeeRole(role)) {
       res.status(400).json({ error: `role must be one of: ${EMPLOYEE_ROLES.join(", ")}` });
       return;
     }
-
-    const parsed = parsePhone(phone);
-    if (!parsed) {
-      res.status(400).json({ error: "Invalid phone number format" });
-      return;
-    }
-    const { normalizedPhone, pendingId } = parsed;
-
-    const conflict = await checkPhoneConflict(pendingId, normalizedPhone);
-    if (conflict) {
-      res.status(409).json({ error: conflict });
-      return;
-    }
-
-    await collections.users.doc(pendingId).set({
-      name: String(name).trim(),
-      displayName: String(name).trim(),
-      phone: normalizedPhone,
-      role,
-      status: "active",
-      createdBy: req.user?.uid,
-      createdAt: FieldValue.serverTimestamp(),
-    });
-
-    res.status(201).json({ success: true, pendingId, phone: normalizedPhone });
+    await createPendingUser({ name, phone, role, createdBy: req.user?.uid }, res);
   } catch (error) {
     console.error("Error creating employee:", error);
     res.status(500).json({ error: "Failed to create employee" });
