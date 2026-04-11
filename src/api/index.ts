@@ -152,20 +152,30 @@ const assertManageableAdminUser = async (uid: string) => {
     throw new ApiHttpError(400, "uid is required");
   }
 
-  const [authUser, userDoc] = await Promise.all([
-    auth.getUser(uid),
-    collections.users.doc(uid).get(),
-  ]);
+  // Pending admins (not yet logged in) only exist in Firestore
+  const userDoc = await collections.users.doc(uid).get();
+  if (!userDoc.exists) {
+    throw new ApiHttpError(404, "User not found");
+  }
 
-  const existingRole =
-    (authUser.customClaims?.role as string | undefined) ??
-    (userDoc.data()?.role as string | undefined);
+  const existingRole = userDoc.data()?.role as string | undefined;
+
+  // For real Firebase Auth users, also check custom claims
+  if (!uid.startsWith("pending_")) {
+    try {
+      const authUser = await auth.getUser(uid);
+      const claimRole = authUser.customClaims?.role as string | undefined;
+      if ((claimRole ?? existingRole) !== "admin") {
+        throw new ApiHttpError(400, "Only admin users can be managed from this endpoint");
+      }
+    } catch (err) {
+      if (err instanceof ApiHttpError) throw err;
+      // Auth user not found — fall through to Firestore role check
+    }
+  }
 
   if (existingRole !== "admin") {
-    throw new ApiHttpError(
-      400,
-      "Only admin users can be managed from this endpoint"
-    );
+    throw new ApiHttpError(400, "Only admin users can be managed from this endpoint");
   }
 };
 
@@ -904,23 +914,21 @@ app.get("/admin/partners", ...requireAdmin, async (_req, res) => {
 
 app.get("/admin/users", requireAuth, requireRole("super_admin"), async (_req, res) => {
   try {
-    const listResult = await auth.listUsers(1000);
-    const users = listResult.users
-      .filter((u) => (u.customClaims as Record<string, unknown> | undefined)?.role === "admin")
-      .map((u) => ({
-        uid: u.uid,
-        email: u.email ?? "",
-        displayName: u.displayName ?? "",
+    const snap = await collections.users.where("role", "==", "admin").orderBy("createdAt", "desc").get();
+    const users = snap.docs.map((doc) => {
+      const data = doc.data();
+      const isPending = doc.id.startsWith("pending_");
+      return {
+        uid: doc.id,
+        name: data.displayName ?? data.name ?? "",
+        displayName: data.displayName ?? data.name ?? "",
+        email: data.email ?? "",
+        phone: data.phone ?? "",
         role: "admin",
-        status: u.disabled ? "disabled" : "active",
-        createdAt: u.metadata.creationTime ?? null,
-      }))
-      .sort((a, b) => {
-        if (!a.createdAt) return 1;
-        if (!b.createdAt) return -1;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      });
-
+        status: isPending ? "pending" : (data.status ?? "active"),
+        createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
+      };
+    });
     res.json({ users });
   } catch (error) {
     console.error("Error fetching admin users:", error);
@@ -930,26 +938,51 @@ app.get("/admin/users", requireAuth, requireRole("super_admin"), async (_req, re
 
 app.post("/admin/users", requireAuth, requireRole("super_admin"), async (req, res) => {
   try {
-    const { email, password, displayName } = req.body ?? {};
-    if (!email || !password || !displayName) {
-      res.status(400).json({ error: "email, password and displayName are required" });
+    const { name, phone, email } = req.body ?? {};
+    if (!name || !phone) {
+      res.status(400).json({ error: "name and phone are required" });
       return;
     }
 
-    const userRecord = await auth.createUser({ email, password, displayName });
-    await auth.setCustomUserClaims(userRecord.uid, { role: "admin" });
+    // Normalize phone to E.164 — accept 10-digit Indian numbers or full E.164
+    const digits = String(phone).replace(/\D/g, "");
+    const normalizedPhone = digits.length === 10 ? `+91${digits}` : `+${digits}`;
+    if (!/^\+\d{10,15}$/.test(normalizedPhone)) {
+      res.status(400).json({ error: "Invalid phone number format" });
+      return;
+    }
 
-    await collections.users.doc(userRecord.uid).set({
-      email,
-      displayName,
-      name: displayName,
+    const pendingId = `pending_${digits.length === 10 ? `91${digits}` : digits}`;
+
+    // Check if a pending or real user already exists with this phone
+    const [pendingSnap, existingFirebaseUser] = await Promise.allSettled([
+      collections.users.doc(pendingId).get(),
+      auth.getUserByPhoneNumber(normalizedPhone),
+    ]);
+
+    if (
+      pendingSnap.status === "fulfilled" && pendingSnap.value.exists
+    ) {
+      res.status(409).json({ error: "An admin user with this phone number already exists" });
+      return;
+    }
+    if (existingFirebaseUser.status === "fulfilled") {
+      res.status(409).json({ error: "A user with this phone number already exists in the system" });
+      return;
+    }
+
+    await collections.users.doc(pendingId).set({
+      name: String(name).trim(),
+      displayName: String(name).trim(),
+      phone: normalizedPhone,
+      email: email ? String(email).trim() : null,
       role: "admin",
       status: "active",
-      createdAt: FieldValue.serverTimestamp(),
       createdBy: req.user?.uid,
+      createdAt: FieldValue.serverTimestamp(),
     });
 
-    res.json({ success: true, uid: userRecord.uid });
+    res.status(201).json({ success: true, pendingId, phone: normalizedPhone });
   } catch (error) {
     console.error("Error creating admin user:", error);
     res.status(500).json({ error: "Failed to create admin user" });
@@ -960,19 +993,33 @@ app.patch("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (r
   try {
     const { uid } = req.params;
     await assertManageableAdminUser(uid);
-    const authUpdate = buildAdminAuthUpdate(req.body ?? {});
 
-    if (Object.keys(authUpdate).length > 0) {
-      await auth.updateUser(uid, authUpdate);
+    // Pending users only exist in Firestore — skip Firebase Auth update
+    if (!uid.startsWith("pending_")) {
+      const authUpdate = buildAdminAuthUpdate(req.body ?? {});
+      if (Object.keys(authUpdate).length > 0) {
+        await auth.updateUser(uid, authUpdate);
+      }
+      const firestoreUpdate = buildAdminFirestoreUpdate({
+        authUpdate,
+        status: req.body?.status,
+        updatedBy: req.user?.uid,
+      });
+      await collections.users.doc(uid).set(firestoreUpdate, { merge: true });
+    } else {
+      // For pending users, only update Firestore fields (name, email, status)
+      const firestoreUpdate: Record<string, unknown> = {
+        updatedAt: FieldValue.serverTimestamp(),
+        updatedBy: req.user?.uid,
+      };
+      const name = nonEmpty(req.body?.name ?? req.body?.displayName);
+      if (name) { firestoreUpdate.name = name; firestoreUpdate.displayName = name; }
+      const email = nonEmpty(req.body?.email);
+      if (email) firestoreUpdate.email = email;
+      if (isAdminUserStatus(req.body?.status)) firestoreUpdate.status = req.body.status;
+      await collections.users.doc(uid).set(firestoreUpdate, { merge: true });
     }
 
-    const firestoreUpdate = buildAdminFirestoreUpdate({
-      authUpdate,
-      status: req.body?.status,
-      updatedBy: req.user?.uid,
-    });
-
-    await collections.users.doc(uid).set(firestoreUpdate, { merge: true });
     res.json({ success: true });
   } catch (error) {
     handleAdminUserApiError("updating admin user", error, res);
@@ -984,7 +1031,10 @@ app.delete("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (
     const { uid } = req.params;
     await assertManageableAdminUser(uid);
 
-    await auth.deleteUser(uid);
+    // Pending users only exist in Firestore — no Firebase Auth record to delete
+    if (!uid.startsWith("pending_")) {
+      await auth.deleteUser(uid);
+    }
     await collections.users.doc(uid).delete();
     res.json({ success: true });
   } catch (error) {
