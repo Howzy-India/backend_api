@@ -2,7 +2,7 @@ import { onRequest } from "firebase-functions/v2/https";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { randomInt } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import { google } from "googleapis";
 import { collections, FieldValue, db, storage, auth } from "../lib/firestore";
 import {
@@ -1115,8 +1115,8 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin"), 
     const callerUid = req.user?.uid ?? "";
     const projectStatus = callerRole === "admin" ? "PENDING_APPROVAL" : (body.status ?? "ACTIVE");
 
-    // Generate a short unique ID
-    const uniqueId = `PROP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    // Generate a collision-resistant unique ID using crypto (CSPRNG)
+    const uniqueId = `PROP-${randomUUID()}`;
 
     const project = await withTransaction(async (client) => {
       // Insert main project row
