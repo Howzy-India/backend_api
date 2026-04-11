@@ -2762,7 +2762,15 @@ app.post(
 export const api = onRequest(
   {
     serviceAccount: "howzy-api@appspot.gserviceaccount.com",
-    secrets: ["GEMINI_API_KEY"],
+    secrets: [
+      "GEMINI_API_KEY",
+      "CLOUD_SQL_INSTANCE",
+      "DB_NAME",
+      "DB_USER",
+      "DB_PASS",
+      "GOOGLE_SHEETS_SA_JSON",
+      "BACKUP_SHEET_ID",
+    ],
   },
   app
 );
