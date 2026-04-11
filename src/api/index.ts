@@ -276,7 +276,7 @@ app.get("/projects", async (req, res) => {
       conditions.push(`p.zone = $${params.length}`);
     }
     if (type) {
-      params.push(type.toUpperCase());
+      params.push(type.toUpperCase().replace(/\s+/g, ""));
       conditions.push(`p.property_type = $${params.length}`);
     }
     if (location) {
@@ -2767,8 +2767,6 @@ export const api = onRequest(
       "CLOUD_SQL_INSTANCE",
       "DB_NAME",
       "DB_USER",
-      "DB_PASS",
-      "GOOGLE_SHEETS_SA_JSON",
       "BACKUP_SHEET_ID",
     ],
   },
