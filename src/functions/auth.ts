@@ -103,10 +103,10 @@ export const syncUserRole = onCall(async (request) => {
     const phone = firebaseUser.phoneNumber;
     const migratedRole = phone ? await migratePendingDoc(uid, phone, firebaseUser) : null;
 
-    if (migratedRole !== null) {
-      role = migratedRole;
-    } else {
+    if (migratedRole === null) {
       await registerNewClient(uid, firebaseUser);
+    } else {
+      role = migratedRole;
     }
   }
 

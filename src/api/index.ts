@@ -249,7 +249,8 @@ const handleAdminUserApiError = (
 
 /** Normalize a phone string to E.164, also return raw digits and pendingId. */
 const parsePhone = (phone: unknown): { digits: string; normalizedPhone: string; pendingId: string } | null => {
-  const digits = String(phone ?? "").replaceAll(/\D/g, "");
+  const raw = typeof phone === "string" ? phone : "";
+  const digits = raw.replaceAll(/\D/g, "");
   if (!digits) return null;
   const normalizedPhone = digits.length === 10 ? `+91${digits}` : `+${digits}`;
   if (!/^\+\d{10,15}$/.test(normalizedPhone)) return null;
@@ -1008,19 +1009,7 @@ app.patch("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (r
     const { uid } = req.params;
     await assertManageableAdminUser(uid);
 
-    // Pending users only exist in Firestore — skip Firebase Auth update
-    if (!uid.startsWith("pending_")) {
-      const authUpdate = buildAdminAuthUpdate(req.body ?? {});
-      if (Object.keys(authUpdate).length > 0) {
-        await auth.updateUser(uid, authUpdate);
-      }
-      const firestoreUpdate = buildAdminFirestoreUpdate({
-        authUpdate,
-        status: req.body?.status,
-        updatedBy: req.user?.uid,
-      });
-      await collections.users.doc(uid).set(firestoreUpdate, { merge: true });
-    } else {
+    if (uid.startsWith("pending_")) {
       // For pending users, only update Firestore fields (name, email, status)
       const firestoreUpdate: Record<string, unknown> = {
         updatedAt: FieldValue.serverTimestamp(),
@@ -1031,6 +1020,18 @@ app.patch("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (r
       const email = nonEmpty(req.body?.email);
       if (email) firestoreUpdate.email = email;
       if (isAdminUserStatus(req.body?.status)) firestoreUpdate.status = req.body.status;
+      await collections.users.doc(uid).set(firestoreUpdate, { merge: true });
+    } else {
+      // Real Firebase Auth users — update Auth + Firestore
+      const authUpdate = buildAdminAuthUpdate(req.body ?? {});
+      if (Object.keys(authUpdate).length > 0) {
+        await auth.updateUser(uid, authUpdate);
+      }
+      const firestoreUpdate = buildAdminFirestoreUpdate({
+        authUpdate,
+        status: req.body?.status,
+        updatedBy: req.user?.uid,
+      });
       await collections.users.doc(uid).set(firestoreUpdate, { merge: true });
     }
 
