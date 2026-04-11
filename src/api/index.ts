@@ -2767,8 +2767,6 @@ export const api = onRequest(
       "CLOUD_SQL_INSTANCE",
       "DB_NAME",
       "DB_USER",
-      "DB_PASS",
-      "GOOGLE_SHEETS_SA_JSON",
       "BACKUP_SHEET_ID",
     ],
   },
