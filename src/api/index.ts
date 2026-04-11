@@ -2336,6 +2336,7 @@ async function getChatSessionForUser(
 // ─── Neural TTS voice map ──────────────────────────────────────────────────────
 const TTS_VOICES: Record<string, { name: string; ssmlGender: string }> = {
   "en-IN": { name: "en-IN-Neural2-A", ssmlGender: "FEMALE" },
+  "en-IN-Neural2-D": { name: "en-IN-Neural2-D", ssmlGender: "FEMALE" },
   "hi-IN": { name: "hi-IN-Neural2-A", ssmlGender: "FEMALE" },
   "ta-IN": { name: "ta-IN-Neural2-A", ssmlGender: "FEMALE" },
   "te-IN": { name: "te-IN-Standard-A", ssmlGender: "FEMALE" },
@@ -2345,12 +2346,15 @@ const TTS_VOICES: Record<string, { name: string; ssmlGender: string }> = {
 // POST /chat/tts — convert text to speech using Google Cloud TTS Neural2 (no auth required)
 app.post("/chat/tts", async (req, res) => {
   try {
-    const { text, languageCode = "en-IN" } = req.body as { text?: string; languageCode?: string };
+    const { text, languageCode = "en-IN", voiceName } = req.body as {
+      text?: string; languageCode?: string; voiceName?: string;
+    };
     if (!text || typeof text !== "string" || !text.trim()) {
       res.status(400).json({ error: "text is required" });
       return;
     }
-    const voice = TTS_VOICES[languageCode] ?? TTS_VOICES["en-IN"];
+    const defaultVoice = TTS_VOICES[languageCode] ?? TTS_VOICES["en-IN"];
+    const resolvedVoiceName = voiceName ?? defaultVoice.name;
 
     const credential = (await import("firebase-admin/app")).getApp().options.credential!;
     const { access_token: accessToken } = await credential.getAccessToken();
@@ -2360,7 +2364,7 @@ app.post("/chat/tts", async (req, res) => {
       headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         input: { text: text.slice(0, 4500) },
-        voice: { languageCode, name: voice.name, ssmlGender: voice.ssmlGender },
+        voice: { languageCode, name: resolvedVoiceName, ssmlGender: defaultVoice.ssmlGender },
         audioConfig: { audioEncoding: "MP3", speakingRate: 1.0, pitch: 0.0 },
       }),
     });
