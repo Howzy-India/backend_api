@@ -314,6 +314,26 @@ app.get("/projects", async (req, res) => {
         COALESCE(
           json_agg(DISTINCT jsonb_build_object(
             'id', c.id, 'bhk_type', c.bhk_type,
+            'min_sft', c.min_sft, 'max_sft', c.max_sft, 'unit_count', c.unit_count
+          )) FILTER (WHERE c.id IS NOT NULL), '[]'
+        ) AS configurations,
+        COALESCE(
+          json_agg(jsonb_build_object(
+            'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
+          ) ORDER BY ph.display_order) FILTER (WHERE ph.id IS NOT NULL), '[]'
+        ) AS photos,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object('id', pa.id, 'amenity', pa.amenity))
+          FILTER (WHERE pa.id IS NOT NULL), '[]'
+        ) AS amenities
+      FROM projects p
+      LEFT JOIN configurations c ON c.project_id = p.id
+      LEFT JOIN project_photos ph ON ph.project_id = p.id
+      LEFT JOIN project_amenities pa ON pa.project_id = p.id
+      WHERE ${whereClause}
+      GROUP BY p.id
+      ORDER BY p.created_at DESC
+      LIMIT $${params.length}
     `;
 
     const rows = await query(sql, params);
@@ -925,14 +945,14 @@ app.post("/admin/users", requireAuth, requireRole("super_admin"), async (req, re
     }
 
     // Normalize phone to E.164 — accept 10-digit Indian numbers or full E.164
-    const digits = String(phone).replace(/\D/g, "");
+    const digits = String(phone).replaceAll(/\D/g, "");
     const normalizedPhone = digits.length === 10 ? `+91${digits}` : `+${digits}`;
     if (!/^\+\d{10,15}$/.test(normalizedPhone)) {
       res.status(400).json({ error: "Invalid phone number format" });
       return;
     }
 
-    const pendingId = `pending_${digits.length === 10 ? `91${digits}` : digits}`;
+    const pendingId = digits.length === 10 ? `pending_91${digits}` : `pending_${digits}`;
 
     // Check if a pending or real user already exists with this phone
     const [pendingSnap, existingFirebaseUser] = await Promise.allSettled([
@@ -975,18 +995,7 @@ app.patch("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (r
     await assertManageableAdminUser(uid);
 
     // Pending users only exist in Firestore — skip Firebase Auth update
-    if (!uid.startsWith("pending_")) {
-      const authUpdate = buildAdminAuthUpdate(req.body ?? {});
-      if (Object.keys(authUpdate).length > 0) {
-        await auth.updateUser(uid, authUpdate);
-      }
-      const firestoreUpdate = buildAdminFirestoreUpdate({
-        authUpdate,
-        status: req.body?.status,
-        updatedBy: req.user?.uid,
-      });
-      await collections.users.doc(uid).set(firestoreUpdate, { merge: true });
-    } else {
+    if (uid.startsWith("pending_")) {
       // For pending users, only update Firestore fields (name, email, status)
       const firestoreUpdate: Record<string, unknown> = {
         updatedAt: FieldValue.serverTimestamp(),
@@ -997,6 +1006,17 @@ app.patch("/admin/users/:uid", requireAuth, requireRole("super_admin"), async (r
       const email = nonEmpty(req.body?.email);
       if (email) firestoreUpdate.email = email;
       if (isAdminUserStatus(req.body?.status)) firestoreUpdate.status = req.body.status;
+      await collections.users.doc(uid).set(firestoreUpdate, { merge: true });
+    } else {
+      const authUpdate = buildAdminAuthUpdate(req.body ?? {});
+      if (Object.keys(authUpdate).length > 0) {
+        await auth.updateUser(uid, authUpdate);
+      }
+      const firestoreUpdate = buildAdminFirestoreUpdate({
+        authUpdate,
+        status: req.body?.status,
+        updatedBy: req.user?.uid,
+      });
       await collections.users.doc(uid).set(firestoreUpdate, { merge: true });
     }
 
