@@ -77,6 +77,14 @@ export const syncUserRole = onCall(async (request) => {
           updatedAt: FieldValue.serverTimestamp(),
         });
         await db.collection("users").doc(pendingId).delete();
+
+        // Sync name from pending doc into Firebase Auth displayName so the
+        // frontend profile badge shows the real name instead of null/"Admin"
+        const pendingName = (pendingData.name as string | undefined) ?? null;
+        if (pendingName && !firebaseUser.displayName) {
+          await auth.updateUser(uid, { displayName: pendingName });
+        }
+
         migratedFromPending = true;
       }
     }
