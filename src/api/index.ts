@@ -2627,32 +2627,29 @@ app.post("/resale", requireAuth, async (req, res) => {
   }
 });
 
+// Shared helper: fetch and validate client owns a Pending resale doc
+async function getOwnedPendingResaleDoc(
+  id: string,
+  uid: string
+): Promise<{ docRef: FirebaseFirestore.DocumentReference; data: FirebaseFirestore.DocumentData } | { error: string; status: number }> {
+  const docRef = collections.resaleProperties.doc(id);
+  const snap = await docRef.get();
+  if (!snap.exists) return { error: "Resale property not found", status: 404 };
+  const data = snap.data() ?? {};
+  if (data.submittedByUid !== uid) return { error: "You can only modify your own properties", status: 403 };
+  if (data.status !== "Pending") return { error: "Only Pending properties can be modified", status: 400 };
+  return { docRef, data };
+}
+
 // Authenticated: client delegates their OWN Pending resale property to an agent
 app.patch("/resale/:id/delegate", requireAuth, async (req, res) => {
   const { id } = req.params;
   const { agentName, agentPhone } = req.body;
   try {
-    const docRef = collections.resaleProperties.doc(id);
-    const snap = await docRef.get();
-    if (!snap.exists) {
-      res.status(404).json({ error: "Resale property not found" });
-      return;
-    }
-    const existing = snap.data() ?? {};
-    if (existing.submittedByUid !== (req as any).user.uid) {
-      res.status(403).json({ error: "You can only delegate your own properties" });
-      return;
-    }
-    if (existing.status !== "Pending") {
-      res.status(400).json({ error: "Only Pending properties can be delegated" });
-      return;
-    }
-    await docRef.update({
-      agentName: agentName ?? null,
-      agentPhone: agentPhone ?? null,
-      updatedAt: new Date(),
-    });
-    const updated = await docRef.get();
+    const result = await getOwnedPendingResaleDoc(id, (req as any).user.uid);
+    if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
+    await result.docRef.update({ agentName: agentName ?? null, agentPhone: agentPhone ?? null, updatedAt: new Date() });
+    const updated = await result.docRef.get();
     res.json({ resaleProperty: mapResaleDoc(updated as any) });
   } catch (error) {
     console.error("Error delegating resale property:", error);
@@ -2664,36 +2661,19 @@ app.patch("/resale/:id/delegate", requireAuth, async (req, res) => {
 app.patch("/resale/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
   try {
-    const docRef = collections.resaleProperties.doc(id);
-    const snap = await docRef.get();
-    if (!snap.exists) {
-      res.status(404).json({ error: "Resale property not found" });
-      return;
-    }
-    const existing = snap.data() ?? {};
-    if (existing.submittedByUid !== (req as any).user.uid) {
-      res.status(403).json({ error: "You can only edit your own properties" });
-      return;
-    }
-    if (existing.status !== "Pending") {
-      res.status(400).json({ error: "Only Pending properties can be edited" });
-      return;
-    }
+    const result = await getOwnedPendingResaleDoc(id, (req as any).user.uid);
+    if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
     const updates: Record<string, any> = {};
     for (const field of RESALE_EDITABLE_FIELDS) {
-      if (req.body[field] !== undefined) {
-        updates[field] = req.body[field];
-      }
+      if (req.body[field] !== undefined) updates[field] = req.body[field];
     }
     if (updates.propertyType && !ALLOWED_RESALE_PROPERTY_TYPES.has(updates.propertyType)) {
-      res.status(400).json({
-        error: `propertyType must be one of: ${[...ALLOWED_RESALE_PROPERTY_TYPES].join(", ")}`,
-      });
+      res.status(400).json({ error: `propertyType must be one of: ${[...ALLOWED_RESALE_PROPERTY_TYPES].join(", ")}` });
       return;
     }
     updates.updatedAt = new Date();
-    await docRef.update(updates);
-    const updated = await docRef.get();
+    await result.docRef.update(updates);
+    const updated = await result.docRef.get();
     res.json({ resaleProperty: mapResaleDoc(updated as any) });
   } catch (error) {
     console.error("Error updating resale property:", error);
