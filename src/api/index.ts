@@ -2391,6 +2391,10 @@ const RESALE_EDITABLE_FIELDS = [
   "title", "description", "price", "propertyType", "city", "location",
   "mapLink", "area", "bedrooms", "bathrooms", "floor", "totalFloors",
   "amenities", "possession", "images",
+  "builderName", "projectName", "segment", "societyType", "landParcel",
+  "numberOfTowers", "numberOfUnits", "density", "emiFrom", "floorPlan",
+  "ownerName", "ownerPhone", "agentName", "agentPhone",
+  "address", "zone", "cluster", "state", "pincode", "landmark",
 ] as const;
 
 type ResaleBody = {
@@ -2409,6 +2413,26 @@ type ResaleBody = {
   amenities?: string[];
   possession?: string;
   images?: string[];
+  builderName?: string;
+  projectName?: string;
+  segment?: string;
+  societyType?: string;
+  landParcel?: string;
+  numberOfTowers?: number;
+  numberOfUnits?: number;
+  density?: string;
+  emiFrom?: string;
+  floorPlan?: string;
+  ownerName?: string;
+  ownerPhone?: string;
+  agentName?: string;
+  agentPhone?: string;
+  address?: string;
+  zone?: string;
+  cluster?: string;
+  state?: string;
+  pincode?: string;
+  landmark?: string;
 };
 
 function validateResaleBody(
@@ -2453,6 +2477,26 @@ function buildResaleFields(body: ResaleBody) {
     amenities: body.amenities ?? [],
     possession: body.possession ?? null,
     images: body.images ?? [],
+    builderName: body.builderName ?? null,
+    projectName: body.projectName ?? null,
+    segment: body.segment ?? null,
+    societyType: body.societyType ?? null,
+    landParcel: body.landParcel ?? null,
+    numberOfTowers: body.numberOfTowers ?? null,
+    numberOfUnits: body.numberOfUnits ?? null,
+    density: body.density ?? null,
+    emiFrom: body.emiFrom ?? null,
+    floorPlan: body.floorPlan ?? null,
+    ownerName: body.ownerName ?? null,
+    ownerPhone: body.ownerPhone ?? null,
+    agentName: body.agentName ?? null,
+    agentPhone: body.agentPhone ?? null,
+    address: body.address ?? null,
+    zone: body.zone ?? null,
+    cluster: body.cluster ?? null,
+    state: body.state ?? null,
+    pincode: body.pincode ?? null,
+    landmark: body.landmark ?? null,
   };
 }
 
@@ -2580,6 +2624,80 @@ app.post("/resale", requireAuth, async (req, res) => {
   } catch (error: any) {
     console.error("Error submitting resale property:", error);
     res.status(500).json({ error: "Failed to submit resale property" });
+  }
+});
+
+// Authenticated: client delegates their OWN Pending resale property to an agent
+app.patch("/resale/:id/delegate", requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { agentName, agentPhone } = req.body;
+  try {
+    const docRef = collections.resaleProperties.doc(id);
+    const snap = await docRef.get();
+    if (!snap.exists) {
+      res.status(404).json({ error: "Resale property not found" });
+      return;
+    }
+    const existing = snap.data() ?? {};
+    if (existing.submittedByUid !== (req as any).user.uid) {
+      res.status(403).json({ error: "You can only delegate your own properties" });
+      return;
+    }
+    if (existing.status !== "Pending") {
+      res.status(400).json({ error: "Only Pending properties can be delegated" });
+      return;
+    }
+    await docRef.update({
+      agentName: agentName ?? null,
+      agentPhone: agentPhone ?? null,
+      updatedAt: new Date(),
+    });
+    const updated = await docRef.get();
+    res.json({ resaleProperty: mapResaleDoc(updated as any) });
+  } catch (error) {
+    console.error("Error delegating resale property:", error);
+    res.status(500).json({ error: "Failed to delegate resale property" });
+  }
+});
+
+// Authenticated: client updates their OWN Pending resale property
+app.patch("/resale/:id", requireAuth, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const docRef = collections.resaleProperties.doc(id);
+    const snap = await docRef.get();
+    if (!snap.exists) {
+      res.status(404).json({ error: "Resale property not found" });
+      return;
+    }
+    const existing = snap.data() ?? {};
+    if (existing.submittedByUid !== (req as any).user.uid) {
+      res.status(403).json({ error: "You can only edit your own properties" });
+      return;
+    }
+    if (existing.status !== "Pending") {
+      res.status(400).json({ error: "Only Pending properties can be edited" });
+      return;
+    }
+    const updates: Record<string, any> = {};
+    for (const field of RESALE_EDITABLE_FIELDS) {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
+    if (updates.propertyType && !ALLOWED_RESALE_PROPERTY_TYPES.has(updates.propertyType)) {
+      res.status(400).json({
+        error: `propertyType must be one of: ${[...ALLOWED_RESALE_PROPERTY_TYPES].join(", ")}`,
+      });
+      return;
+    }
+    updates.updatedAt = new Date();
+    await docRef.update(updates);
+    const updated = await docRef.get();
+    res.json({ resaleProperty: mapResaleDoc(updated as any) });
+  } catch (error) {
+    console.error("Error updating resale property:", error);
+    res.status(500).json({ error: "Failed to update resale property" });
   }
 });
 
