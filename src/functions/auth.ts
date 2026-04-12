@@ -99,6 +99,13 @@ export const syncUserRole = onCall(async (request) => {
   if (snap.exists) {
     role = toValidRole(snap.data()!.role);
     await userRef.set({ lastLoginAt: FieldValue.serverTimestamp() }, { merge: true });
+
+    // If existing doc has role='client', check if there's a pending override
+    // (happens when super admin onboards an already-registered client as employee)
+    if (role === "client" && firebaseUser.phoneNumber) {
+      const pendingRole = await migratePendingDoc(uid, firebaseUser.phoneNumber, firebaseUser);
+      if (pendingRole !== null) role = pendingRole;
+    }
   } else {
     const phone = firebaseUser.phoneNumber;
     const migratedRole = phone ? await migratePendingDoc(uid, phone, firebaseUser) : null;

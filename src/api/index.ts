@@ -1104,7 +1104,22 @@ app.post("/admin/employees", requireAuth, requireRole("super_admin"), async (req
       res.status(400).json({ error: `role must be one of: ${EMPLOYEE_ROLES.join(", ")}` });
       return;
     }
-    await createPendingUser({ name, phone, role, createdBy: req.user?.uid }, res);
+    const created = await createPendingUser({ name, phone, role, createdBy: req.user?.uid }, res);
+    if (!created) return;
+
+    // If this phone number already has a Firebase Auth user (previously logged in as client),
+    // update their UID-keyed Firestore doc and custom claims immediately.
+    const parsed = parsePhone(phone);
+    if (parsed) {
+      try {
+        const existingUser = await auth.getUserByPhoneNumber(parsed.normalizedPhone);
+        const uidRef = collections.users.doc(existingUser.uid);
+        await uidRef.set({ role, updatedAt: FieldValue.serverTimestamp(), updatedBy: req.user?.uid }, { merge: true });
+        await auth.setCustomUserClaims(existingUser.uid, { role });
+      } catch (_) {
+        // No existing Auth user for this phone — that's fine, pending doc is enough
+      }
+    }
   } catch (error) {
     console.error("Error creating employee:", error);
     res.status(500).json({ error: "Failed to create employee" });
@@ -1833,7 +1848,7 @@ app.get("/pilot/assigned-enquiries", requireAuth, requireRole("sales", "admin", 
   }
 });
 
-app.get("/partner/assigned-enquiries", requireAuth, requireRole("partner", "admin", "super_admin"), async (_req, res) => {
+app.get("/partner/assigned-enquiries", requireAuth, requireRole("partner", "admin", "super_admin", "howzer_sourcing", "howzer_sales"), async (_req, res) => {
   try {
     const enquiries = await fetchAssignedEnquiries((e) =>
       Boolean(e.assigned_partner_id)
@@ -1992,12 +2007,13 @@ app.patch("/leads/:id", requireAuth, requireRole("agent", "admin", "super_admin"
 app.get(
   "/partner/submissions",
   requireAuth,
-  requireRole("partner", "admin", "super_admin"),
+  requireRole("partner", "admin", "super_admin", "howzer_sourcing", "howzer_sales"),
   async (req, res) => {
     try {
       const email = req.user?.email;
       if (!email) {
-        res.status(400).json({ error: "Email not found in token" });
+        // howzer_sourcing/howzer_sales log in via phone — no submissions in this collection
+        res.json({ submissions: [] });
         return;
       }
       const snapshot = await collections.submissions
@@ -2024,7 +2040,7 @@ app.get(
 app.patch(
   "/partner/enquiries/:id/status",
   requireAuth,
-  requireRole("partner", "admin", "super_admin"),
+  requireRole("partner", "admin", "super_admin", "howzer_sourcing", "howzer_sales"),
   async (req, res) => {
     try {
       const { id } = req.params;
