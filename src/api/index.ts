@@ -1116,8 +1116,12 @@ app.post("/admin/employees", requireAuth, requireRole("super_admin"), async (req
         const uidRef = collections.users.doc(existingUser.uid);
         await uidRef.set({ role, updatedAt: FieldValue.serverTimestamp(), updatedBy: req.user?.uid }, { merge: true });
         await auth.setCustomUserClaims(existingUser.uid, { role });
-      } catch (_) {
-        // No existing Auth user for this phone — that's fine, pending doc is enough
+      } catch (err: unknown) {
+        // No existing Auth user for this phone — that's expected, pending doc is enough
+        const code = (err as { code?: string })?.code;
+        if (code !== "auth/user-not-found") {
+          console.warn("Unexpected error checking existing Auth user:", code);
+        }
       }
     }
   } catch (error) {
@@ -1382,6 +1386,88 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin"), 
   }
 });
 
+/** Applies all field updates for a project inside a transaction. */
+async function applyProjectUpdate(
+  projectId: string,
+  body: UpdateProjectInput,
+  callerUid: string
+): Promise<void> {
+  await withTransaction(async (client) => {
+    const sets: string[] = ["updated_at = now()", "updated_by = $1"];
+    const params: unknown[] = [callerUid];
+
+    const fieldMap: Record<string, string> = {
+      name: "name", developerName: "developer_name", reraNumber: "rera_number",
+      propertyType: "property_type", projectType: "project_type",
+      projectSegment: "project_segment", possessionStatus: "possession_status",
+      possessionDate: "possession_date", address: "address", zone: "zone",
+      location: "location", area: "area", city: "city", state: "state",
+      pincode: "pincode", landmark: "landmark", mapLink: "map_link",
+      landParcel: "land_parcel", numberOfTowers: "number_of_towers",
+      totalUnits: "total_units", availableUnits: "available_units",
+      density: "density", sftCostingPerSqft: "sft_costing_per_sqft",
+      emiStartsFrom: "emi_starts_from", pricingTwoBhk: "pricing_two_bhk",
+      pricingThreeBhk: "pricing_three_bhk", pricingFourBhk: "pricing_four_bhk",
+      videoLink3D: "video_link_3d", brochureLink: "brochure_link",
+      onboardingAgreementLink: "onboarding_agreement_link",
+      projectManagerName: "project_manager_name",
+      projectManagerContact: "project_manager_contact",
+      spocName: "spoc_name", spocContact: "spoc_contact",
+      usp: "usp", teaser: "teaser", details: "details", status: "status",
+    };
+
+    for (const [jsKey, colName] of Object.entries(fieldMap)) {
+      if (jsKey in body && (body as any)[jsKey] !== undefined) {
+        params.push((body as any)[jsKey]);
+        sets.push(`${colName} = $${params.length}`);
+      }
+    }
+
+    params.push(projectId);
+    await client.query(
+      `UPDATE projects SET ${sets.join(", ")} WHERE id = $${params.length}`,
+      params
+    );
+
+    if (body.configurations !== undefined) {
+      await client.query("DELETE FROM configurations WHERE project_id = $1", [projectId]);
+      for (const cfg of body.configurations ?? []) {
+        await client.query(
+          `INSERT INTO configurations (project_id, bhk_count, min_sft, max_sft, unit_count)
+           VALUES ($1,$2,$3,$4,$5)`,
+          [projectId, cfg.bhkCount, cfg.minSft, cfg.maxSft, cfg.unitCount]
+        );
+      }
+    }
+
+    if (body.photos?.length) {
+      const countRes = await client.query(
+        "SELECT COUNT(*) FROM project_photos WHERE project_id = $1",
+        [projectId]
+      );
+      let startOrder = Number(countRes.rows[0].count);
+      for (const photo of body.photos) {
+        const photoUrl = typeof photo === "string" ? photo : (photo as any).url;
+        await client.query(
+          "INSERT INTO project_photos (project_id, url, display_order) VALUES ($1,$2,$3)",
+          [projectId, photoUrl, startOrder++]
+        );
+      }
+    }
+
+    if (body.amenities !== undefined) {
+      await client.query("DELETE FROM project_amenities WHERE project_id = $1", [projectId]);
+      for (const amenity of body.amenities ?? []) {
+        await client.query(
+          `INSERT INTO project_amenities (project_id, amenity)
+           VALUES ($1,$2) ON CONFLICT (project_id, amenity) DO NOTHING`,
+          [projectId, amenity]
+        );
+      }
+    }
+  });
+}
+
 // Update a project (admin/super_admin)
 app.patch("/admin/properties/:id", requireAuth, requireRole("super_admin", "admin"), async (req, res) => {
   try {
@@ -1394,84 +1480,7 @@ app.patch("/admin/properties/:id", requireAuth, requireRole("super_admin", "admi
     if (!existing) return res.status(404).json({ error: "Project not found" });
     const projectId = existing.id;
 
-    await withTransaction(async (client) => {
-      // Build dynamic SET clause for scalar fields
-      const sets: string[] = ["updated_at = now()", "updated_by = $1"];
-      const params: unknown[] = [callerUid];
-
-      const fieldMap: Record<string, string> = {
-        name: "name", developerName: "developer_name", reraNumber: "rera_number",
-        propertyType: "property_type", projectType: "project_type",
-        projectSegment: "project_segment", possessionStatus: "possession_status",
-        possessionDate: "possession_date", address: "address", zone: "zone",
-        location: "location", area: "area", city: "city", state: "state",
-        pincode: "pincode", landmark: "landmark", mapLink: "map_link",
-        landParcel: "land_parcel", numberOfTowers: "number_of_towers",
-        totalUnits: "total_units", availableUnits: "available_units",
-        density: "density", sftCostingPerSqft: "sft_costing_per_sqft",
-        emiStartsFrom: "emi_starts_from", pricingTwoBhk: "pricing_two_bhk",
-        pricingThreeBhk: "pricing_three_bhk", pricingFourBhk: "pricing_four_bhk",
-        videoLink3D: "video_link_3d", brochureLink: "brochure_link",
-        onboardingAgreementLink: "onboarding_agreement_link",
-        projectManagerName: "project_manager_name",
-        projectManagerContact: "project_manager_contact",
-        spocName: "spoc_name", spocContact: "spoc_contact",
-        usp: "usp", teaser: "teaser", details: "details", status: "status",
-      };
-
-      for (const [jsKey, colName] of Object.entries(fieldMap)) {
-        if (jsKey in body && (body as any)[jsKey] !== undefined) {
-          params.push((body as any)[jsKey]);
-          sets.push(`${colName} = $${params.length}`);
-        }
-      }
-
-      params.push(projectId);
-      await client.query(
-        `UPDATE projects SET ${sets.join(", ")} WHERE id = $${params.length}`,
-        params
-      );
-
-      // Replace configurations if provided
-      if (body.configurations !== undefined) {
-        await client.query("DELETE FROM configurations WHERE project_id = $1", [projectId]);
-        for (const cfg of body.configurations ?? []) {
-          await client.query(
-            `INSERT INTO configurations (project_id, bhk_count, min_sft, max_sft, unit_count)
-             VALUES ($1,$2,$3,$4,$5)`,
-            [projectId, cfg.bhkCount, cfg.minSft, cfg.maxSft, cfg.unitCount]
-          );
-        }
-      }
-
-      // Append new photos if provided (accept string[] or {url, displayOrder}[])
-      if (body.photos?.length) {
-        const countRes = await client.query(
-          "SELECT COUNT(*) FROM project_photos WHERE project_id = $1",
-          [projectId]
-        );
-        let startOrder = Number(countRes.rows[0].count);
-        for (const photo of body.photos) {
-          const photoUrl = typeof photo === 'string' ? photo : (photo as any).url;
-          await client.query(
-            "INSERT INTO project_photos (project_id, url, display_order) VALUES ($1,$2,$3)",
-            [projectId, photoUrl, startOrder++]
-          );
-        }
-      }
-
-      // Replace amenities if provided
-      if (body.amenities !== undefined) {
-        await client.query("DELETE FROM project_amenities WHERE project_id = $1", [projectId]);
-        for (const amenity of body.amenities ?? []) {
-          await client.query(
-            `INSERT INTO project_amenities (project_id, amenity)
-             VALUES ($1,$2) ON CONFLICT (project_id, amenity) DO NOTHING`,
-            [projectId, amenity]
-          );
-        }
-      }
-    });
+    await applyProjectUpdate(projectId, body, callerUid);
 
     const updated = await fetchProjectById(projectId);
     if (updated) upsertProjectRow(updated).catch(() => {});
