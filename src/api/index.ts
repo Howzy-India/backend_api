@@ -291,7 +291,7 @@ const toUserListItem = (doc: FirebaseFirestore.QueryDocumentSnapshot) => {
 
 /** Validate phone, check conflicts, create a pending user doc, and send 201. Returns false if already responded with an error. */
 const createPendingUser = async (
-  params: { name: unknown; phone: unknown; role: string; email?: unknown; createdBy?: string },
+  params: { name: string; phone: string; role: string; email?: string; createdBy?: string },
   res: express.Response
 ): Promise<boolean> => {
   const { name, phone, role, email, createdBy } = params;
@@ -311,15 +311,15 @@ const createPendingUser = async (
     return false;
   }
   const doc: Record<string, unknown> = {
-    name: `${name}`.trim(),
-    displayName: `${name}`.trim(),
+    name: String(name).trim(),
+    displayName: String(name).trim(),
     phone: normalizedPhone,
     role,
     status: "active",
     createdBy,
     createdAt: FieldValue.serverTimestamp(),
   };
-  if (email) doc.email = `${email}`.trim();
+  if (email) doc.email = String(email).trim();
   await collections.users.doc(pendingId).set(doc);
   res.status(201).json({ success: true, pendingId, phone: normalizedPhone });
   return true;
@@ -1374,8 +1374,7 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
       if (body.amenities?.length) {
         for (const amenity of body.amenities) {
           await client.query(
-            `INSERT INTO project_amenities (project_id, amenity)
-             VALUES ($1,$2) ON CONFLICT (project_id, amenity) DO NOTHING`,
+            `INSERT INTO project_amenities (project_id, amenity) VALUES ($1,$2)`,
             [projectId, amenity]
           );
         }
@@ -1441,8 +1440,7 @@ async function replaceAmenities(
   await client.query("DELETE FROM project_amenities WHERE project_id = $1", [projectId]);
   for (const amenity of amenities) {
     await client.query(
-      `INSERT INTO project_amenities (project_id, amenity)
-       VALUES ($1,$2) ON CONFLICT (project_id, amenity) DO NOTHING`,
+      `INSERT INTO project_amenities (project_id, amenity) VALUES ($1,$2)`,
       [projectId, amenity]
     );
   }
