@@ -353,7 +353,9 @@ app.get("/projects", optionalAuth, async (req, res) => {
 
     const limit = Math.min(Number(limitStr) || 50, 200);
     const callerRole = req.user?.role;
+    const callerUid = req.user?.uid;
     const isAdminCaller = callerRole === "super_admin" || callerRole === "admin";
+    const isSourcingCaller = callerRole === "howzer_sourcing" || callerRole === "howzer_sales";
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -361,6 +363,12 @@ app.get("/projects", optionalAuth, async (req, res) => {
     if (status && isAdminCaller) {
       params.push(status.toUpperCase());
       conditions.push(`p.status = $${params.length}`);
+    } else if (isSourcingCaller && status === "PENDING_APPROVAL" && callerUid) {
+      // Sourcing employees can see their own pending projects only
+      params.push("PENDING_APPROVAL");
+      conditions.push(`p.status = $${params.length}`);
+      params.push(callerUid);
+      conditions.push(`p.created_by = $${params.length}`);
     } else if (callerRole === "super_admin") {
       conditions.push("p.status != 'INACTIVE'");
     } else {
@@ -1498,15 +1506,26 @@ async function applyProjectUpdate(
 }
 
 // Update a project (admin/super_admin)
-app.patch("/admin/properties/:id", requireAuth, requireRole("super_admin", "admin"), async (req, res) => {
+app.patch("/admin/properties/:id", requireAuth, requireRole("super_admin", "admin", "howzer_sourcing", "howzer_sales"), async (req, res) => {
   try {
     const { id } = req.params;
     const body = req.body as UpdateProjectInput;
     const callerUid = req.user?.uid ?? "";
+    const callerRole = req.user?.role ?? "";
 
     // Verify project exists
-    const existing: any = await queryOne("SELECT id FROM projects WHERE id::text = $1 OR unique_id = $1", [id]);
+    const existing: any = await queryOne(
+      "SELECT id, status, created_by FROM projects WHERE id::text = $1 OR unique_id = $1",
+      [id]
+    );
     if (!existing) return res.status(404).json({ error: "Project not found" });
+
+    // Sourcing employees may only edit their own PENDING_APPROVAL projects
+    const isSourcingRole = callerRole === "howzer_sourcing" || callerRole === "howzer_sales";
+    if (isSourcingRole && (existing.created_by !== callerUid || existing.status !== "PENDING_APPROVAL")) {
+      return res.status(403).json({ error: "Cannot edit: project not pending or not yours" });
+    }
+
     const projectId = existing.id;
 
     await applyProjectUpdate(projectId, body, callerUid);
@@ -1521,9 +1540,25 @@ app.patch("/admin/properties/:id", requireAuth, requireRole("super_admin", "admi
   }
 });
 
-app.delete("/admin/properties/:id", requireAuth, requireRole("super_admin", "admin"), async (req, res) => {
+app.delete("/admin/properties/:id", requireAuth, requireRole("super_admin", "admin", "howzer_sourcing", "howzer_sales"), async (req, res) => {
   try {
     const { id } = req.params;
+    const callerUid = req.user?.uid ?? "";
+    const callerRole = req.user?.role ?? "";
+
+    // Sourcing employees may only delete their own PENDING_APPROVAL projects
+    const isSourcingRole = callerRole === "howzer_sourcing" || callerRole === "howzer_sales";
+    if (isSourcingRole) {
+      const existing: any = await queryOne(
+        "SELECT id, status, created_by FROM projects WHERE id::text = $1 OR unique_id = $1",
+        [id]
+      );
+      if (!existing) return res.status(404).json({ error: "Property not found" });
+      if (existing.created_by !== callerUid || existing.status !== "PENDING_APPROVAL") {
+        return res.status(403).json({ error: "Cannot delete: project not pending or not yours" });
+      }
+    }
+
     const result = await query(
       "UPDATE projects SET status = 'INACTIVE', updated_at = now() WHERE id::text = $1 OR unique_id = $1 RETURNING id",
       [id]
