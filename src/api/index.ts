@@ -338,7 +338,7 @@ app.get("/health", async (_req, res) => {
 
 // ── Projects ─────────────────────────────────────────────────────────
 
-app.get("/projects", async (req, res) => {
+app.get("/projects", optionalAuth, async (req, res) => {
   try {
     const {
       location,
@@ -348,12 +348,24 @@ app.get("/projects", async (req, res) => {
       q,
       after,
       limit: limitStr,
+      status,
     } = req.query as Record<string, string>;
 
     const limit = Math.min(Number(limitStr) || 50, 200);
+    const callerRole = req.user?.role;
+    const isAdminCaller = callerRole === "super_admin" || callerRole === "admin";
 
-    const conditions: string[] = ["p.status != 'INACTIVE'"];
+    const conditions: string[] = [];
     const params: unknown[] = [];
+
+    if (status && isAdminCaller) {
+      params.push(status.toUpperCase());
+      conditions.push(`p.status = $${params.length}`);
+    } else if (callerRole === "super_admin") {
+      conditions.push("p.status != 'INACTIVE'");
+    } else {
+      conditions.push("p.status NOT IN ('INACTIVE', 'PENDING_APPROVAL')");
+    }
 
     if (city) {
       params.push(city);
@@ -1147,7 +1159,7 @@ app.delete("/admin/employees/:uid", requireAuth, requireRole("super_admin"), asy
 
 // ── Admin: Create User With Any Role ─────────────────────────────────
 
-const MANAGEABLE_ROLES = ["admin", "agent", "partner", "client"] as const;
+const MANAGEABLE_ROLES = ["admin", "agent", "partner", "client", "howzer_sourcing", "howzer_sales"] as const;
 type ManageableRole = (typeof MANAGEABLE_ROLES)[number];
 const isManageableRole = (v: unknown): v is ManageableRole =>
   MANAGEABLE_ROLES.includes(v as ManageableRole);
@@ -1468,6 +1480,36 @@ app.delete("/admin/properties/:id", requireAuth, requireRole("super_admin", "adm
   } catch (error) {
     console.error("Error deleting property:", error);
     res.status(500).json({ error: "Failed to delete property" });
+  }
+});
+
+app.post("/admin/properties/:id/approve", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await query(
+      "UPDATE projects SET status = 'ACTIVE', updated_at = now() WHERE id::text = $1 OR unique_id = $1 RETURNING id",
+      [id]
+    );
+    if (!result.length) return res.status(404).json({ error: "Property not found" });
+    res.json({ success: true, project: { id: result[0].id, status: "ACTIVE" } });
+  } catch (error) {
+    console.error("Error approving property:", error);
+    res.status(500).json({ error: "Failed to approve property" });
+  }
+});
+
+app.post("/admin/properties/:id/reject", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await query(
+      "UPDATE projects SET status = 'INACTIVE', updated_at = now() WHERE id::text = $1 OR unique_id = $1 RETURNING id",
+      [id]
+    );
+    if (!result.length) return res.status(404).json({ error: "Property not found" });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error rejecting property:", error);
+    res.status(500).json({ error: "Failed to reject property" });
   }
 });
 
