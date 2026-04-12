@@ -16,14 +16,6 @@ export type ProjectStatus =
   | "INACTIVE"
   | "COMING_SOON"
   | "PENDING_APPROVAL";
-export type BhkType =
-  | "BHK_1"
-  | "BHK_2"
-  | "BHK_3"
-  | "BHK_4"
-  | "BHK_5"
-  | "VILLA"
-  | "STUDIO";
 
 // Raw SQL row from the `projects` table (snake_case columns)
 export interface ProjectRow {
@@ -77,7 +69,7 @@ export interface ProjectRow {
 export interface ConfigurationRow {
   id: string;
   project_id: string;
-  bhk_type: string;
+  bhk_count: number;
   min_sft: number;
   max_sft: number;
   unit_count: number;
@@ -99,7 +91,7 @@ export interface ProjectAmenityRow {
 // Camel-case API response shape
 export interface ConfigurationResponse {
   id: string;
-  bhkType: BhkType;
+  bhkCount: number;
   minSft: number;
   maxSft: number;
   unitCount: number;
@@ -195,7 +187,7 @@ export interface CreateProjectInput {
   details?: string;
   status?: ProjectStatus;
   configurations?: Array<{
-    bhkType: BhkType;
+    bhkCount: number;
     minSft: number;
     maxSft: number;
     unitCount: number;

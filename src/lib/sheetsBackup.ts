@@ -4,10 +4,10 @@ import type { ProjectResponse } from "../types/project";
 // Column order matches the original CSV spec (39 columns)
 function toSheetRow(p: ProjectResponse): string[] {
   const configs = p.configurations
-    .map((c) => `${c.bhkType}(${c.minSft}-${c.maxSft}sft)`)
+    .map((c) => `${c.bhkCount}(${c.minSft}-${c.maxSft}sft)`)
     .join("; ");
   const unitDetail = p.configurations
-    .map((c) => `${c.bhkType}: ${c.unitCount}`)
+    .map((c) => `${c.bhkCount}: ${c.unitCount}`)
     .join(", ");
 
   return [

@@ -20,7 +20,7 @@ query ListProjects(
     propertyType projectSegment possessionStatus possessionDate
     sftCostingPerSqft availableUnits totalUnits status
     photos(orderBy: [{ displayOrder: ASC }], limit: 1) { url }
-    configurations { bhkType minSft maxSft unitCount }
+    configurations { bhkCount minSft maxSft unitCount }
     amenities { amenity }
   }
 }
@@ -40,7 +40,7 @@ query GetProject($id: UUID!) @auth(level: PUBLIC) {
     spocName spocContact
     usp teaser details status leadRegistrationStatus
     createdAt updatedAt
-    configurations { id bhkType minSft maxSft unitCount }
+    configurations { id bhkCount minSft maxSft unitCount }
     photos(orderBy: [{ displayOrder: ASC }]) { id url displayOrder }
     amenities { id amenity }
   }
