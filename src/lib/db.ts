@@ -61,6 +61,14 @@ async function getPool(): Promise<Pool> {
           ) THEN
             ALTER TABLE configurations ADD COLUMN bhk_count INT;
           END IF;
+          -- Ensure project_amenities has unique constraint for ON CONFLICT support
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE table_schema = 'public' AND table_name = 'project_amenities'
+              AND constraint_type = 'UNIQUE'
+          ) THEN
+            ALTER TABLE project_amenities ADD CONSTRAINT project_amenities_project_id_amenity_key UNIQUE (project_id, amenity);
+          END IF;
         END $$;
       `);
     } finally {
