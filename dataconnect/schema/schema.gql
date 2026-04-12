@@ -128,7 +128,7 @@ type Configuration @table(name: "configurations") {
   id:        UUID!    @default(expr: "uuidV4()")
   projectId: UUID!    @col(name: "project_id")
   project:   Project! @ref(fields: ["projectId"], references: ["id"])
-  bhkType:   String!  @col(name: "bhk_type")
+  bhkCount:  Int!     @col(name: "bhk_count")
   minSft:    Int!     @col(name: "min_sft")
   maxSft:    Int!     @col(name: "max_sft")
   unitCount: Int!     @col(name: "unit_count")

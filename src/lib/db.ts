@@ -31,35 +31,35 @@ async function getPool(): Promise<Pool> {
     console.error("[db] Idle client error:", err.message);
   });
 
-  // Idempotent migration: ensure configurations.bhk_type TEXT exists
-  // Handles 3 scenarios:
-  //   1. Column is named bhk_count (old schema) → rename + change type
-  //   2. Column bhk_type exists but is INT → change type
-  //   3. Neither column exists (table recreated from old schema) → add bhk_type TEXT
+  // Idempotent migration: ensure configurations.bhk_count INT exists
+  // Handles legacy states where column was renamed to bhk_type
   try {
     const client = await _pool.connect();
     try {
       await client.query(`
         DO $$
         BEGIN
+          -- If renamed to bhk_type, rename back to bhk_count
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'configurations' AND column_name = 'bhk_type'
+          ) THEN
+            ALTER TABLE configurations RENAME COLUMN bhk_type TO bhk_count;
+          END IF;
+          -- If bhk_count is TEXT (from prior migration), cast back to INT
           IF EXISTS (
             SELECT 1 FROM information_schema.columns
             WHERE table_schema = 'public' AND table_name = 'configurations' AND column_name = 'bhk_count'
+              AND data_type = 'text'
           ) THEN
-            ALTER TABLE configurations RENAME COLUMN bhk_count TO bhk_type;
+            ALTER TABLE configurations ALTER COLUMN bhk_count TYPE INT USING bhk_count::INT;
           END IF;
-          IF EXISTS (
-            SELECT 1 FROM information_schema.columns
-            WHERE table_schema = 'public' AND table_name = 'configurations' AND column_name = 'bhk_type'
-              AND data_type = 'integer'
-          ) THEN
-            ALTER TABLE configurations ALTER COLUMN bhk_type TYPE TEXT USING bhk_type::TEXT;
-          END IF;
+          -- If neither exists, add bhk_count INT
           IF NOT EXISTS (
             SELECT 1 FROM information_schema.columns
-            WHERE table_schema = 'public' AND table_name = 'configurations' AND column_name = 'bhk_type'
+            WHERE table_schema = 'public' AND table_name = 'configurations' AND column_name = 'bhk_count'
           ) THEN
-            ALTER TABLE configurations ADD COLUMN bhk_type TEXT;
+            ALTER TABLE configurations ADD COLUMN bhk_count INT;
           END IF;
         END $$;
       `);
