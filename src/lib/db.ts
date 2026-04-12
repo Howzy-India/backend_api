@@ -31,7 +31,11 @@ async function getPool(): Promise<Pool> {
     console.error("[db] Idle client error:", err.message);
   });
 
-  // Idempotent migration: rename bhk_count INT → bhk_type TEXT in configurations
+  // Idempotent migration: ensure configurations.bhk_type TEXT exists
+  // Handles 3 scenarios:
+  //   1. Column is named bhk_count (old schema) → rename + change type
+  //   2. Column bhk_type exists but is INT → change type
+  //   3. Neither column exists (table recreated from old schema) → add bhk_type TEXT
   try {
     const client = await _pool.connect();
     try {
@@ -40,16 +44,22 @@ async function getPool(): Promise<Pool> {
         BEGIN
           IF EXISTS (
             SELECT 1 FROM information_schema.columns
-            WHERE table_name = 'configurations' AND column_name = 'bhk_count'
+            WHERE table_schema = 'public' AND table_name = 'configurations' AND column_name = 'bhk_count'
           ) THEN
             ALTER TABLE configurations RENAME COLUMN bhk_count TO bhk_type;
           END IF;
           IF EXISTS (
             SELECT 1 FROM information_schema.columns
-            WHERE table_name = 'configurations' AND column_name = 'bhk_type'
+            WHERE table_schema = 'public' AND table_name = 'configurations' AND column_name = 'bhk_type'
               AND data_type = 'integer'
           ) THEN
             ALTER TABLE configurations ALTER COLUMN bhk_type TYPE TEXT USING bhk_type::TEXT;
+          END IF;
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'configurations' AND column_name = 'bhk_type'
+          ) THEN
+            ALTER TABLE configurations ADD COLUMN bhk_type TEXT;
           END IF;
         END $$;
       `);
