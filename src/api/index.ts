@@ -1281,7 +1281,7 @@ async function fetchProjectById(id: string) {
   });
 }
 
-app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin"), async (req, res) => {
+app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "howzer_sourcing", "howzer_sales"), async (req, res) => {
   try {
     const body = req.body as CreateProjectInput;
 
@@ -1297,7 +1297,9 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin"), 
 
     const callerRole = req.user?.role;
     const callerUid = req.user?.uid ?? "";
-    const projectStatus = callerRole === "admin" ? "PENDING_APPROVAL" : (body.status ?? "ACTIVE");
+    // Non-super_admin roles always submit for approval
+    const pendingRoles = ["admin", "howzer_sourcing", "howzer_sales"];
+    const projectStatus = pendingRoles.includes(callerRole ?? "") ? "PENDING_APPROVAL" : (body.status ?? "ACTIVE");
 
     // Generate a collision-resistant unique ID using crypto (CSPRNG)
     const uniqueId = `PROP-${randomUUID()}`;
@@ -1379,7 +1381,7 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin"), 
     // Fire-and-forget backup
     if (fullProject) upsertProjectRow(fullProject).catch(() => {});
 
-    res.status(201).json({ id: project.id, uniqueId, success: true, pending: callerRole === "admin" });
+    res.status(201).json({ id: project.id, uniqueId, success: true, pending: pendingRoles.includes(callerRole ?? "") });
   } catch (error) {
     console.error("Error creating property:", error);
     res.status(500).json({ error: "Failed to create property" });
