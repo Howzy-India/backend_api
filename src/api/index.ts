@@ -311,15 +311,15 @@ const createPendingUser = async (
     return false;
   }
   const doc: Record<string, unknown> = {
-    name: String(name).trim(),
-    displayName: String(name).trim(),
+    name: `${name}`.trim(),
+    displayName: `${name}`.trim(),
     phone: normalizedPhone,
     role,
     status: "active",
     createdBy,
     createdAt: FieldValue.serverTimestamp(),
   };
-  if (email) doc.email = String(email).trim();
+  if (email) doc.email = `${email}`.trim();
   await collections.users.doc(pendingId).set(doc);
   res.status(201).json({ success: true, pendingId, phone: normalizedPhone });
   return true;
@@ -1281,7 +1281,7 @@ async function fetchProjectById(id: string) {
   });
 }
 
-app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin"), async (req, res) => {
+app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "howzer_sourcing", "howzer_sales"), async (req, res) => {
   try {
     const body = req.body as CreateProjectInput;
 
@@ -1297,7 +1297,9 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin"), 
 
     const callerRole = req.user?.role;
     const callerUid = req.user?.uid ?? "";
-    const projectStatus = callerRole === "admin" ? "PENDING_APPROVAL" : (body.status ?? "ACTIVE");
+    // Non-super_admin roles always submit for approval
+    const pendingRoles = new Set(["admin", "howzer_sourcing", "howzer_sales"]);
+    const projectStatus = pendingRoles.has(callerRole ?? "") ? "PENDING_APPROVAL" : (body.status ?? "ACTIVE");
 
     // Generate a collision-resistant unique ID using crypto (CSPRNG)
     const uniqueId = `PROP-${randomUUID()}`;
@@ -1379,12 +1381,64 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin"), 
     // Fire-and-forget backup
     if (fullProject) upsertProjectRow(fullProject).catch(() => {});
 
-    res.status(201).json({ id: project.id, uniqueId, success: true, pending: callerRole === "admin" });
+    res.status(201).json({ id: project.id, uniqueId, success: true, pending: pendingRoles.has(callerRole ?? "") });
   } catch (error) {
     console.error("Error creating property:", error);
     res.status(500).json({ error: "Failed to create property" });
   }
 });
+
+/** Replaces configurations for a project within a transaction. */
+async function replaceConfigurations(
+  client: any,
+  projectId: string,
+  configurations: UpdateProjectInput["configurations"]
+): Promise<void> {
+  await client.query("DELETE FROM configurations WHERE project_id = $1", [projectId]);
+  for (const cfg of configurations ?? []) {
+    await client.query(
+      `INSERT INTO configurations (project_id, bhk_count, min_sft, max_sft, unit_count)
+       VALUES ($1,$2,$3,$4,$5)`,
+      [projectId, cfg.bhkCount, cfg.minSft, cfg.maxSft, cfg.unitCount]
+    );
+  }
+}
+
+/** Appends new photos for a project within a transaction. */
+async function appendPhotos(
+  client: any,
+  projectId: string,
+  photos: UpdateProjectInput["photos"]
+): Promise<void> {
+  const countRes = await client.query(
+    "SELECT COUNT(*) FROM project_photos WHERE project_id = $1",
+    [projectId]
+  );
+  let startOrder = Number(countRes.rows[0].count);
+  for (const photo of photos ?? []) {
+    const photoUrl = typeof photo === "string" ? photo : (photo as any).url;
+    await client.query(
+      "INSERT INTO project_photos (project_id, url, display_order) VALUES ($1,$2,$3)",
+      [projectId, photoUrl, startOrder++]
+    );
+  }
+}
+
+/** Replaces amenities for a project within a transaction. */
+async function replaceAmenities(
+  client: any,
+  projectId: string,
+  amenities: string[]
+): Promise<void> {
+  await client.query("DELETE FROM project_amenities WHERE project_id = $1", [projectId]);
+  for (const amenity of amenities) {
+    await client.query(
+      `INSERT INTO project_amenities (project_id, amenity)
+       VALUES ($1,$2) ON CONFLICT (project_id, amenity) DO NOTHING`,
+      [projectId, amenity]
+    );
+  }
+}
 
 /** Applies all field updates for a project inside a transaction. */
 async function applyProjectUpdate(
@@ -1430,40 +1484,15 @@ async function applyProjectUpdate(
     );
 
     if (body.configurations !== undefined) {
-      await client.query("DELETE FROM configurations WHERE project_id = $1", [projectId]);
-      for (const cfg of body.configurations ?? []) {
-        await client.query(
-          `INSERT INTO configurations (project_id, bhk_count, min_sft, max_sft, unit_count)
-           VALUES ($1,$2,$3,$4,$5)`,
-          [projectId, cfg.bhkCount, cfg.minSft, cfg.maxSft, cfg.unitCount]
-        );
-      }
+      await replaceConfigurations(client, projectId, body.configurations);
     }
 
     if (body.photos?.length) {
-      const countRes = await client.query(
-        "SELECT COUNT(*) FROM project_photos WHERE project_id = $1",
-        [projectId]
-      );
-      let startOrder = Number(countRes.rows[0].count);
-      for (const photo of body.photos) {
-        const photoUrl = typeof photo === "string" ? photo : (photo as any).url;
-        await client.query(
-          "INSERT INTO project_photos (project_id, url, display_order) VALUES ($1,$2,$3)",
-          [projectId, photoUrl, startOrder++]
-        );
-      }
+      await appendPhotos(client, projectId, body.photos);
     }
 
     if (body.amenities !== undefined) {
-      await client.query("DELETE FROM project_amenities WHERE project_id = $1", [projectId]);
-      for (const amenity of body.amenities ?? []) {
-        await client.query(
-          `INSERT INTO project_amenities (project_id, amenity)
-           VALUES ($1,$2) ON CONFLICT (project_id, amenity) DO NOTHING`,
-          [projectId, amenity]
-        );
-      }
+      await replaceAmenities(client, projectId, body.amenities ?? []);
     }
   });
 }
