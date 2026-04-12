@@ -1318,12 +1318,13 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin"), 
         }
       }
 
-      // Insert photos
+      // Insert photos (accept string[] or {url, displayOrder}[])
       if (body.photos?.length) {
         for (let i = 0; i < body.photos.length; i++) {
+          const photoUrl = typeof body.photos[i] === 'string' ? body.photos[i] : (body.photos[i] as any).url;
           await client.query(
             `INSERT INTO project_photos (project_id, url, display_order) VALUES ($1,$2,$3)`,
-            [projectId, body.photos[i], i]
+            [projectId, photoUrl, i]
           );
         }
       }
@@ -1416,17 +1417,18 @@ app.patch("/admin/properties/:id", requireAuth, requireRole("super_admin", "admi
         }
       }
 
-      // Append new photos if provided
+      // Append new photos if provided (accept string[] or {url, displayOrder}[])
       if (body.photos?.length) {
         const countRes = await client.query(
           "SELECT COUNT(*) FROM project_photos WHERE project_id = $1",
           [projectId]
         );
         let startOrder = Number(countRes.rows[0].count);
-        for (const url of body.photos) {
+        for (const photo of body.photos) {
+          const photoUrl = typeof photo === 'string' ? photo : (photo as any).url;
           await client.query(
             "INSERT INTO project_photos (project_id, url, display_order) VALUES ($1,$2,$3)",
-            [projectId, url, startOrder++]
+            [projectId, photoUrl, startOrder++]
           );
         }
       }

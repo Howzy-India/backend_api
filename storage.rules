@@ -30,6 +30,15 @@ service firebase.storage {
             || request.auth.token.role == 'partner');
     }
 
+    // ── Project Media ────────────────────────────────────────────────
+    // Path: projects/{folder}/{fileName}
+    match /projects/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && (request.auth.token.role == 'admin'
+            || request.auth.token.role == 'super_admin');
+    }
+
     // ── Submission Documents ─────────────────────────────────────────
     // Path: submissions/{submissionId}/{fileName}
     match /submissions/{submissionId}/{fileName} {
