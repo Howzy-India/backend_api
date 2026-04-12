@@ -311,15 +311,15 @@ const createPendingUser = async (
     return false;
   }
   const doc: Record<string, unknown> = {
-    name: `${name}`.trim(),
-    displayName: `${name}`.trim(),
+    name: String(name).trim(),
+    displayName: String(name).trim(),
     phone: normalizedPhone,
     role,
     status: "active",
     createdBy,
     createdAt: FieldValue.serverTimestamp(),
   };
-  if (email) doc.email = `${email}`.trim();
+  if (email) doc.email = String(email).trim();
   await collections.users.doc(pendingId).set(doc);
   res.status(201).json({ success: true, pendingId, phone: normalizedPhone });
   return true;
