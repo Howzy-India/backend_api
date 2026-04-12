@@ -1374,8 +1374,7 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
       if (body.amenities?.length) {
         for (const amenity of body.amenities) {
           await client.query(
-            `INSERT INTO project_amenities (project_id, amenity)
-             VALUES ($1,$2) ON CONFLICT (project_id, amenity) DO NOTHING`,
+            `INSERT INTO project_amenities (project_id, amenity) VALUES ($1,$2)`,
             [projectId, amenity]
           );
         }
@@ -1441,8 +1440,7 @@ async function replaceAmenities(
   await client.query("DELETE FROM project_amenities WHERE project_id = $1", [projectId]);
   for (const amenity of amenities) {
     await client.query(
-      `INSERT INTO project_amenities (project_id, amenity)
-       VALUES ($1,$2) ON CONFLICT (project_id, amenity) DO NOTHING`,
+      `INSERT INTO project_amenities (project_id, amenity) VALUES ($1,$2)`,
       [projectId, amenity]
     );
   }
