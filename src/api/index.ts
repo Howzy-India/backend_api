@@ -456,7 +456,7 @@ app.get("/projects/:id", async (req, res) => {
       LEFT JOIN configurations c ON c.project_id = p.id
       LEFT JOIN project_photos ph ON ph.project_id = p.id
       LEFT JOIN project_amenities pa ON pa.project_id = p.id
-      WHERE (p.id = $1 OR p.unique_id = $1) AND p.status != 'INACTIVE'
+      WHERE (p.id::text = $1 OR p.unique_id = $1) AND p.status != 'INACTIVE'
       GROUP BY p.id
     `;
 
@@ -1237,7 +1237,7 @@ async function fetchProjectById(id: string) {
     LEFT JOIN configurations c ON c.project_id = p.id
     LEFT JOIN project_photos ph ON ph.project_id = p.id
     LEFT JOIN project_amenities pa ON pa.project_id = p.id
-    WHERE p.id = $1
+    WHERE p.id::text = $1
     GROUP BY p.id
   `;
   const row: any = await queryOne(sql, [id]);
@@ -1363,7 +1363,7 @@ app.patch("/admin/properties/:id", requireAuth, requireRole("super_admin", "admi
     const callerUid = req.user?.uid ?? "";
 
     // Verify project exists
-    const existing: any = await queryOne("SELECT id FROM projects WHERE id = $1 OR unique_id = $1", [id]);
+    const existing: any = await queryOne("SELECT id FROM projects WHERE id::text = $1 OR unique_id = $1", [id]);
     if (!existing) return res.status(404).json({ error: "Project not found" });
     const projectId = existing.id;
 
@@ -1460,7 +1460,7 @@ app.delete("/admin/properties/:id", requireAuth, requireRole("super_admin", "adm
   try {
     const { id } = req.params;
     const result = await query(
-      "UPDATE projects SET status = 'INACTIVE', updated_at = now() WHERE id = $1 OR unique_id = $1 RETURNING id",
+      "UPDATE projects SET status = 'INACTIVE', updated_at = now() WHERE id::text = $1 OR unique_id = $1 RETURNING id",
       [id]
     );
     if (!result.length) return res.status(404).json({ error: "Property not found" });
