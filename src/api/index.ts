@@ -291,7 +291,7 @@ const toUserListItem = (doc: FirebaseFirestore.QueryDocumentSnapshot) => {
 
 /** Validate phone, check conflicts, create a pending user doc, and send 201. Returns false if already responded with an error. */
 const createPendingUser = async (
-  params: { name: unknown; phone: unknown; role: string; email?: unknown; createdBy?: string },
+  params: { name: string; phone: string; role: string; email?: string; createdBy?: string },
   res: express.Response
 ): Promise<boolean> => {
   const { name, phone, role, email, createdBy } = params;
