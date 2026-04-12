@@ -75,3 +75,6 @@ jobs:
 
       - name: Deploy Firestore Indexes
         run: firebase deploy --only firestore:indexes --project "$FIREBASE_PROJECT" --non-interactive
+
+      - name: Deploy Storage Rules
+        run: firebase deploy --only storage --project "$FIREBASE_PROJECT" --non-interactive
