@@ -687,23 +687,23 @@ app.get("/earnings", ...requireAdmin, async (_req, res) => {
 app.get("/submissions", requireAuth, async (req, res) => {
   try {
     const userRole = req.user?.role;
-    const requesterEmail = req.user?.email?.toLowerCase();
+    const requesterIdentifier = (req.user?.email ?? req.user?.phone)?.toLowerCase();
     const isAdmin = isAdminRole(userRole);
     const email = req.query.email as string | undefined;
     const normalizedEmail = email?.toLowerCase();
 
     if (!isAdmin) {
-      if (!requesterEmail) {
+      if (!requesterIdentifier) {
         res.status(400).json({ error: "Email not found in token" });
         return;
       }
-      if (normalizedEmail && normalizedEmail !== requesterEmail) {
+      if (normalizedEmail && normalizedEmail !== requesterIdentifier) {
         res.status(403).json({ error: "Forbidden: can only access own submissions" });
         return;
       }
     }
 
-    const effectiveEmail = isAdmin ? normalizedEmail : requesterEmail;
+    const effectiveEmail = isAdmin ? normalizedEmail : requesterIdentifier;
     let query: FirebaseFirestore.Query = collections.submissions;
     if (effectiveEmail) {
       query = query.where("email", "==", effectiveEmail);
@@ -1792,17 +1792,17 @@ app.get("/admin/client-360/:email", ...requireAdmin, async (req, res) => {
 
 app.get("/client/enquiries", requireAuth, async (req, res) => {
   try {
-    const requesterEmail = req.user?.email?.toLowerCase();
+    const requesterIdentifier = (req.user?.email ?? req.user?.phone)?.toLowerCase();
     const emailParam = (req.query.email as string | undefined)?.toLowerCase();
-    if (!requesterEmail) {
+    if (!requesterIdentifier) {
       res.status(400).json({ error: "Email not found in token" });
       return;
     }
-    if (emailParam && emailParam !== requesterEmail) {
+    if (emailParam && emailParam !== requesterIdentifier) {
       res.status(403).json({ error: "Forbidden: can only access own enquiries" });
       return;
     }
-    const email = emailParam ?? requesterEmail;
+    const email = emailParam ?? requesterIdentifier;
 
     const snapshot = await collections.enquiries
       .where("email", "==", email)
@@ -2551,7 +2551,7 @@ app.get("/resale", async (req, res) => {
 // NOTE: must be registered BEFORE /resale/:id to avoid route collision
 app.get("/resale/mine", requireAuth, async (req, res) => {
   try {
-    const userEmail = req.user?.email?.toLowerCase();
+    const userEmail = (req.user?.email ?? req.user?.phone)?.toLowerCase();
     if (!userEmail) {
       res.status(400).json({ error: "User email not found in token" });
       return;
