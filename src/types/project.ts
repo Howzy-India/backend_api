@@ -51,6 +51,7 @@ export interface ProjectRow {
   video_link_3d: string | null;
   brochure_link: string | null;
   onboarding_agreement_link: string | null;
+  agreement_percentage: number | null;
   project_manager_name: string | null;
   project_manager_contact: string | null;
   spoc_name: string | null;
@@ -133,6 +134,7 @@ export interface ProjectResponse {
   videoLink3D: string | null;
   brochureLink: string | null;
   onboardingAgreementLink: string | null;
+  agreementPercentage: number | null;
   projectManager: { name: string | null; contact: string | null };
   spoc: { name: string | null; contact: string | null };
   usp: string | null;
@@ -180,6 +182,7 @@ export interface CreateProjectInput {
   videoLink3D?: string;
   brochureLink?: string;
   onboardingAgreementLink?: string;
+  agreementPercentage?: number;
   projectManagerName?: string;
   projectManagerContact?: string;
   spocName?: string;

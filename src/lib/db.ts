@@ -76,6 +76,13 @@ async function getPool(): Promise<Pool> {
           ) THEN
             ALTER TABLE projects ADD COLUMN rejection_reason TEXT;
           END IF;
+          -- Add agreement_percentage column for percentage mentioned in onboarding agreement
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'projects' AND column_name = 'agreement_percentage'
+          ) THEN
+            ALTER TABLE projects ADD COLUMN agreement_percentage NUMERIC(5,2);
+          END IF;
         END $$;
       `);
     } finally {
