@@ -41,6 +41,13 @@ service firebase.storage {
             || request.auth.token.role == 'howzer_sales');
     }
 
+    // ── Resale Floor Plans ───────────────────────────────────────────
+    // Path: resale/floor-plans/{fileName}
+    match /resale/floor-plans/{fileName} {
+      allow read: if true; // Public read for resale floor plans
+      allow write: if request.auth != null; // Any authenticated user can upload
+    }
+
     // ── Submission Documents ─────────────────────────────────────────
     // Path: submissions/{submissionId}/{fileName}
     match /submissions/{submissionId}/{fileName} {
