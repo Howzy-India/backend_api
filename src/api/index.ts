@@ -1321,12 +1321,12 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
           area, city, state, pincode, landmark, map_link, land_parcel, number_of_towers,
           total_units, available_units, density, sft_costing_per_sqft, emi_starts_from,
           pricing_two_bhk, pricing_three_bhk, pricing_four_bhk, video_link_3d, brochure_link,
-          onboarding_agreement_link, project_manager_name, project_manager_contact,
+          onboarding_agreement_link, agreement_percentage, project_manager_name, project_manager_contact,
           spoc_name, spoc_contact, usp, teaser, details, status, lead_registration_status,
           created_by, updated_by, created_at, updated_at
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
-          $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,now(),now()
+          $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,now(),now()
         ) RETURNING *`,
         [
           uniqueId, String(body.name).trim(), body.developerName ?? "",
@@ -1340,7 +1340,8 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
           body.sftCostingPerSqft ?? null, body.emiStartsFrom ?? null,
           body.pricingTwoBhk ?? null, body.pricingThreeBhk ?? null, body.pricingFourBhk ?? null,
           body.videoLink3D ?? null, body.brochureLink ?? null,
-          body.onboardingAgreementLink ?? null, body.projectManagerName ?? null,
+          body.onboardingAgreementLink ?? null, body.agreementPercentage ?? null,
+          body.projectManagerName ?? null,
           body.projectManagerContact ?? null, body.spocName ?? null, body.spocContact ?? null,
           body.usp ?? null, body.teaser ?? null, body.details ?? null,
           projectStatus, null, callerUid, callerUid,
@@ -1470,6 +1471,7 @@ async function applyProjectUpdate(
       pricingThreeBhk: "pricing_three_bhk", pricingFourBhk: "pricing_four_bhk",
       videoLink3D: "video_link_3d", brochureLink: "brochure_link",
       onboardingAgreementLink: "onboarding_agreement_link",
+      agreementPercentage: "agreement_percentage",
       projectManagerName: "project_manager_name",
       projectManagerContact: "project_manager_contact",
       spocName: "spoc_name", spocContact: "spoc_contact",

@@ -49,6 +49,7 @@ export const mapProjectRow = (
   videoLink3D: row.video_link_3d,
   brochureLink: row.brochure_link,
   onboardingAgreementLink: row.onboarding_agreement_link,
+  agreementPercentage: row.agreement_percentage ?? null,
   projectManager: {
     name: row.project_manager_name,
     contact: row.project_manager_contact,
