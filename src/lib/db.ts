@@ -69,6 +69,13 @@ async function getPool(): Promise<Pool> {
           ) THEN
             ALTER TABLE project_amenities ADD CONSTRAINT project_amenities_project_id_amenity_key UNIQUE (project_id, amenity);
           END IF;
+          -- Add rejection_reason column for project approval workflow
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'projects' AND column_name = 'rejection_reason'
+          ) THEN
+            ALTER TABLE projects ADD COLUMN rejection_reason TEXT;
+          END IF;
         END $$;
       `);
     } finally {

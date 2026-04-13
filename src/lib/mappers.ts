@@ -62,6 +62,7 @@ export const mapProjectRow = (
   details: row.details,
   status: row.status,
   leadRegistrationStatus: row.lead_registration_status,
+  rejectionReason: row.rejection_reason ?? null,
   createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
   updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
   configurations: (row.configurations ?? []).map((c) => ({
