@@ -60,6 +60,7 @@ export interface ProjectRow {
   details: string | null;
   status: ProjectStatus;
   lead_registration_status: string | null;
+  rejection_reason: string | null;
   created_by: string | null;
   updated_by: string | null;
   created_at: Date;
@@ -139,6 +140,7 @@ export interface ProjectResponse {
   details: string | null;
   status: ProjectStatus;
   leadRegistrationStatus: string | null;
+  rejectionReason: string | null;
   createdAt: string | null;
   updatedAt: string | null;
   configurations: ConfigurationResponse[];

@@ -1573,7 +1573,7 @@ app.post("/admin/properties/:id/approve", requireAuth, requireRole("super_admin"
   try {
     const { id } = req.params;
     const result = await query(
-      "UPDATE projects SET status = 'ACTIVE', updated_at = now() WHERE id::text = $1 OR unique_id = $1 RETURNING id",
+      "UPDATE projects SET status = 'ACTIVE', rejection_reason = NULL, updated_at = now() WHERE id::text = $1 OR unique_id = $1 RETURNING id",
       [id]
     );
     if (!result.length) return res.status(404).json({ error: "Property not found" });
@@ -1587,9 +1587,10 @@ app.post("/admin/properties/:id/approve", requireAuth, requireRole("super_admin"
 app.post("/admin/properties/:id/reject", requireAuth, requireRole("super_admin"), async (req, res) => {
   try {
     const { id } = req.params;
+    const reason = (req.body?.reason as string | undefined) ?? null;
     const result = await query(
-      "UPDATE projects SET status = 'INACTIVE', updated_at = now() WHERE id::text = $1 OR unique_id = $1 RETURNING id",
-      [id]
+      "UPDATE projects SET status = 'INACTIVE', rejection_reason = $2, updated_at = now() WHERE id::text = $1 OR unique_id = $1 RETURNING id",
+      [id, reason]
     );
     if (!result.length) return res.status(404).json({ error: "Property not found" });
     res.json({ success: true });
