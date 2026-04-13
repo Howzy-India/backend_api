@@ -23,6 +23,7 @@ export const requireAuth = async (
     req.user = {
       uid: decoded.uid,
       email: decoded.email,
+      phone: decoded.phone_number,
       role: decoded.role as string | undefined,
     };
     next();
@@ -78,6 +79,7 @@ export const optionalAuth = async (
       req.user = {
         uid: decoded.uid,
         email: decoded.email,
+        phone: decoded.phone_number,
         role: decoded.role as string | undefined,
       };
     } catch {
