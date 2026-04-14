@@ -1309,8 +1309,13 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
     const pendingRoles = new Set(["admin", "howzer_sourcing", "howzer_sales"]);
     const projectStatus = pendingRoles.has(callerRole ?? "") ? "PENDING_APPROVAL" : (body.status ?? "ACTIVE");
 
-    // Generate a collision-resistant unique ID using crypto (CSPRNG)
-    const uniqueId = `PROP-${randomUUID()}`;
+    // Use client-supplied uniqueId if valid (allows pre-scoped storage uploads);
+    // otherwise generate a new one server-side.
+    const UNIQUE_ID_RE = /^PROP-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uniqueId =
+      body.uniqueId && UNIQUE_ID_RE.test(body.uniqueId)
+        ? body.uniqueId
+        : `PROP-${randomUUID()}`;
 
     const project = await withTransaction(async (client) => {
       // Insert main project row
@@ -1559,11 +1564,24 @@ app.delete("/admin/properties/:id", requireAuth, requireRole("super_admin", "adm
       }
     }
 
+    // Fetch unique_id before soft-deleting so we can clean up Storage
+    const projectRow: any = await queryOne(
+      "SELECT unique_id FROM projects WHERE id::text = $1 OR unique_id = $1",
+      [id]
+    );
+    if (!projectRow) return res.status(404).json({ error: "Property not found" });
+
     const result = await query(
       "UPDATE projects SET status = 'INACTIVE', updated_at = now() WHERE id::text = $1 OR unique_id = $1 RETURNING id",
       [id]
     );
     if (!result.length) return res.status(404).json({ error: "Property not found" });
+
+    // Delete all project files from Firebase Storage (fire-and-forget — never block the response)
+    storage.bucket().deleteFiles({ prefix: `projects/${projectRow.unique_id}/` }).catch((err: unknown) => {
+      console.error(`[storage] Failed to delete files for project ${projectRow.unique_id}:`, err);
+    });
+
     res.json({ success: true });
   } catch (error) {
     console.error("Error deleting property:", error);
