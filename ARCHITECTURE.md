@@ -82,7 +82,7 @@ projects (44 fields)
 configurations (per project, 1-N)
 ├── id UUID PK
 ├── project_id UUID FK → projects.id (indexed)
-├── bhk_type ENUM   -- BHK_1 | BHK_2 | BHK_3 | BHK_4 | BHK_5 | VILLA | STUDIO
+├── bhk_count INT
 ├── min_sft NUMERIC
 ├── max_sft NUMERIC
 └── unit_count INT
