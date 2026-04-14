@@ -1386,8 +1386,8 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
 
     const fullProject = await fetchProjectById(project.id);
 
-    // Fire-and-forget backup
-    if (fullProject) upsertProjectRow(fullProject).catch(() => {});
+    // Await backup so Cloud Functions doesn't freeze the process before it completes
+    if (fullProject) await upsertProjectRow(fullProject);
 
     res.status(201).json({ id: project.id, uniqueId, success: true, pending: pendingRoles.has(callerRole ?? "") });
   } catch (error) {
@@ -1531,7 +1531,7 @@ app.patch("/admin/properties/:id", requireAuth, requireRole("super_admin", "admi
     await applyProjectUpdate(projectId, body, callerUid);
 
     const updated = await fetchProjectById(projectId);
-    if (updated) upsertProjectRow(updated).catch(() => {});
+    if (updated) await upsertProjectRow(updated);
 
     res.json({ success: true, project: updated });
   } catch (error) {
