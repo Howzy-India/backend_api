@@ -152,6 +152,8 @@ export interface ProjectResponse {
 
 // Input for creating a project (from request body)
 export interface CreateProjectInput {
+  /** Optional client-generated unique ID (PROP-<uuid>). If provided and valid, used as-is. */
+  uniqueId?: string;
   name: string;
   developerName: string;
   propertyType: PropertyType;
