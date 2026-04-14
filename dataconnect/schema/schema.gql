@@ -100,6 +100,7 @@ type Project @table(name: "projects", singular: "project", plural: "projects") {
   videoLink3D:             String @col(name: "video_link_3d")
   brochureLink:            String @col(name: "brochure_link")
   onboardingAgreementLink: String @col(name: "onboarding_agreement_link")
+  agreementPercentage:     Float  @col(name: "agreement_percentage")
 
   # ── Contacts ──
   projectManagerName:    String @col(name: "project_manager_name")
@@ -115,6 +116,7 @@ type Project @table(name: "projects", singular: "project", plural: "projects") {
   # ── Meta ──
   status:                 ProjectStatus! @default(value: "ACTIVE")
   leadRegistrationStatus: String         @col(name: "lead_registration_status")
+  rejectionReason:        String         @col(name: "rejection_reason")
   createdBy:              String         @col(name: "created_by")
   updatedBy:              String         @col(name: "updated_by")
   createdAt:              Timestamp!     @default(expr: "request.time") @col(name: "created_at")

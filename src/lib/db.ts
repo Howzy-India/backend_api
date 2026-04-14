@@ -61,28 +61,6 @@ async function getPool(): Promise<Pool> {
           ) THEN
             ALTER TABLE configurations ADD COLUMN bhk_count INT;
           END IF;
-          -- Ensure project_amenities has unique constraint for ON CONFLICT support
-          IF NOT EXISTS (
-            SELECT 1 FROM information_schema.table_constraints
-            WHERE table_schema = 'public' AND table_name = 'project_amenities'
-              AND constraint_type = 'UNIQUE'
-          ) THEN
-            ALTER TABLE project_amenities ADD CONSTRAINT project_amenities_project_id_amenity_key UNIQUE (project_id, amenity);
-          END IF;
-          -- Add rejection_reason column for project approval workflow
-          IF NOT EXISTS (
-            SELECT 1 FROM information_schema.columns
-            WHERE table_schema = 'public' AND table_name = 'projects' AND column_name = 'rejection_reason'
-          ) THEN
-            ALTER TABLE projects ADD COLUMN rejection_reason TEXT;
-          END IF;
-          -- Add agreement_percentage column for percentage mentioned in onboarding agreement
-          IF NOT EXISTS (
-            SELECT 1 FROM information_schema.columns
-            WHERE table_schema = 'public' AND table_name = 'projects' AND column_name = 'agreement_percentage'
-          ) THEN
-            ALTER TABLE projects ADD COLUMN agreement_percentage NUMERIC(5,2);
-          END IF;
         END $$;
       `);
     } finally {
