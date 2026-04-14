@@ -81,9 +81,43 @@ async function ensureHeaderRow(
 ): Promise<void> {
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: "Sheet1!A1:AM1",
+    range: "Sheet1!A1",
   });
-  if (!res.data.values || res.data.values.length === 0) {
+
+  const firstCell: string = res.data.values?.[0]?.[0] ?? "";
+
+  // Headers already present — nothing to do
+  if (firstCell === SHEET_HEADERS[0]) return;
+
+  if (!firstCell) {
+    // Sheet is empty — write headers at A1
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: "Sheet1!A1",
+      valueInputOption: "RAW",
+      requestBody: { values: [SHEET_HEADERS] },
+    });
+  } else {
+    // Data exists at row 1 but no header row — insert a blank row at the top
+    // then write headers into it so existing data rows shift down by 1
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            insertDimension: {
+              range: {
+                sheetId: 0,
+                dimension: "ROWS",
+                startIndex: 0,
+                endIndex: 1,
+              },
+              inheritFromBefore: false,
+            },
+          },
+        ],
+      },
+    });
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: "Sheet1!A1",
