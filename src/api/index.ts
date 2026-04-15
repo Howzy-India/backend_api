@@ -1332,11 +1332,11 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
           lead_registration_app_id, lead_registration_app_password,
           commission_type, commission_value,
           usp, teaser, details, status, lead_registration_status,
-          created_by, updated_by, created_at, updated_at
+          created_by, updated_by, submitted_by_name, submitted_by_mobile, created_at, updated_at
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
           $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,
-          $39,$40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,now(),now()
+          $39,$40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,$52,$53,now(),now()
         ) RETURNING *`,
         [
           uniqueId, String(body.name).trim(), body.developerName ?? "",
@@ -1360,6 +1360,7 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
           body.commissionType ?? null, body.commissionValue ?? null,
           body.usp ?? null, body.teaser ?? null, body.details ?? null,
           projectStatus, null, callerUid, callerUid,
+          body.submittedByName ?? null, body.submittedByMobile ?? null,
         ]
       );
       const projectId = insertResult.rows[0].id;
@@ -1493,6 +1494,8 @@ async function applyProjectUpdate(
       leadRegistrationAppPassword: "lead_registration_app_password", // NOSONAR - this is a column name, not a credential
       commissionType: "commission_type",
       commissionValue: "commission_value",
+      submittedByName: "submitted_by_name",
+      submittedByMobile: "submitted_by_mobile",
       usp: "usp", teaser: "teaser", details: "details", status: "status",
     };
 
