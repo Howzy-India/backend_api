@@ -63,6 +63,8 @@ app.use(cookieParser());
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
+const UNIQUE_ID_RE = /^PROP-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const isPermissionDeniedError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
   return (
@@ -1310,7 +1312,6 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
 
     // Use client-supplied uniqueId if valid (allows pre-scoped storage uploads);
     // otherwise generate a new one server-side.
-    const UNIQUE_ID_RE = /^PROP-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const uniqueId =
       body.uniqueId && UNIQUE_ID_RE.test(body.uniqueId)
         ? body.uniqueId
@@ -1387,8 +1388,6 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
 
       return insertResult.rows[0];
     });
-
-    const fullProject = await fetchProjectById(project.id);
 
     res.status(201).json({ id: project.id, uniqueId, success: true, pending: pendingRoles.has(callerRole ?? "") });
   } catch (error) {
@@ -1630,11 +1629,11 @@ const CSV_HEADERS = [
   "configurations", "photos", "amenities",
 ];
 
-function csvEscape(value: unknown): string {
+function csvEscape(value: string | number | boolean | null | undefined): string {
   if (value == null) return "";
   const s = String(value);
   if (s.includes(",") || s.includes('"') || s.includes("\n")) {
-    return '"' + s.replace(/"/g, '""') + '"';
+    return '"' + s.replaceAll('"', '""') + '"';
   }
   return s;
 }
@@ -1664,41 +1663,41 @@ function projectToCsvRow(p: any): string {
   return values.map(csvEscape).join(",");
 }
 
+/** Parse a single RFC-4180 CSV row into an array of field strings. */
+function parseCsvRow(line: string): string[] {
+  const fields: string[] = [];
+  let i = 0;
+  while (i < line.length) {
+    if (line[i] === '"') {
+      let field = "";
+      i++;
+      while (i < line.length) {
+        if (line[i] === '"' && line[i + 1] === '"') { field += '"'; i += 2; }
+        else if (line[i] === '"') { i++; break; }
+        else { field += line[i++]; }
+      }
+      fields.push(field);
+      if (line[i] === ",") i++;
+    } else {
+      const end = line.indexOf(",", i);
+      if (end === -1) { fields.push(line.slice(i)); break; }
+      fields.push(line.slice(i, end));
+      i = end + 1;
+    }
+  }
+  return fields;
+}
+
 /** Parse a simple RFC-4180 CSV string into an array of row objects. */
 function parseCsv(text: string): Record<string, string>[] {
-  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  const lines = text.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n");
   if (lines.length < 2) return [];
-
-  const parseRow = (line: string): string[] => {
-    const fields: string[] = [];
-    let i = 0;
-    while (i < line.length) {
-      if (line[i] === '"') {
-        let field = "";
-        i++; // skip opening quote
-        while (i < line.length) {
-          if (line[i] === '"' && line[i + 1] === '"') { field += '"'; i += 2; }
-          else if (line[i] === '"') { i++; break; }
-          else { field += line[i++]; }
-        }
-        fields.push(field);
-        if (line[i] === ",") i++;
-      } else {
-        const end = line.indexOf(",", i);
-        if (end === -1) { fields.push(line.slice(i)); break; }
-        fields.push(line.slice(i, end));
-        i = end + 1;
-      }
-    }
-    return fields;
-  };
-
-  const headers = parseRow(lines[0]);
+  const headers = parseCsvRow(lines[0]);
   return lines
     .slice(1)
     .filter((l) => l.trim() !== "")
     .map((l) => {
-      const vals = parseRow(l);
+      const vals = parseCsvRow(l);
       const obj: Record<string, string> = {};
       headers.forEach((h, idx) => { obj[h] = vals[idx] ?? ""; });
       return obj;
@@ -1754,6 +1753,29 @@ app.get("/admin/projects/export", requireAuth, requireRole("super_admin"), async
   }
 });
 
+type CsvConfig = { bhkCount: number; minSft: number; maxSft: number; unitCount: number };
+
+const CONFIG_RE = /^(\d+):(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)sft:(\d+)u$/;
+
+function parseConfigurations(raw: string): CsvConfig[] {
+  return raw
+    .split("|")
+    .filter((s) => s.trim())
+    .map((seg) => {
+      const m = CONFIG_RE.exec(seg);
+      if (!m) return null;
+      return { bhkCount: Number(m[1]), minSft: Number(m[2]), maxSft: Number(m[3]), unitCount: Number(m[4]) };
+    })
+    .filter((x): x is CsvConfig => x !== null);
+}
+
+function validateImportRowFields(r: Record<string, string>): string | null {
+  if (!r["name"]?.trim()) return "name is required";
+  if (!r["city"]?.trim()) return "city is required";
+  if (!r["property_type"]?.trim()) return "property_type is required";
+  return null;
+}
+
 // Super admin: import projects from CSV (upsert by unique_id)
 app.post("/admin/projects/import", requireAuth, requireRole("super_admin"), express.text({ type: "text/csv", limit: "10mb" }), async (req, res) => {
   try {
@@ -1768,32 +1790,22 @@ app.post("/admin/projects/import", requireAuth, requireRole("super_admin"), expr
     const callerUid = req.user?.uid ?? "";
     const results: Array<{ uniqueId: string; action: "created" | "updated"; id: string }> = [];
     const errors: Array<{ row: number; uniqueId?: string; error: string }> = [];
+    const toNum = (v: string) => v.trim() === "" ? null : Number(v);
+    const toStr = (v: string) => v.trim() === "" ? null : v.trim();
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      const uniqueId = r["unique_id"]?.trim();
-      const name = r["name"]?.trim();
-      const city = r["city"]?.trim();
-      const propertyType = r["property_type"]?.trim();
+      const validationError = validateImportRowFields(r);
+      if (validationError) {
+        errors.push({ row: i + 2, uniqueId: r["unique_id"]?.trim(), error: validationError });
+        continue;
+      }
+      const uniqueId = r["unique_id"]?.trim() ?? "";
+      const name = r["name"].trim();
+      const city = r["city"].trim();
+      const propertyType = r["property_type"].trim();
 
-      if (!name) { errors.push({ row: i + 2, uniqueId, error: "name is required" }); continue; }
-      if (!city) { errors.push({ row: i + 2, uniqueId, error: "city is required" }); continue; }
-      if (!propertyType) { errors.push({ row: i + 2, uniqueId, error: "property_type is required" }); continue; }
-
-      const toNum = (v: string) => v.trim() === "" ? null : Number(v);
-      const toStr = (v: string) => v.trim() === "" ? null : v.trim();
-
-      // Parse nested configs: "3:1000-1500sft:5u|4:1800-2200sft:3u"
-      const configurations = (r["configurations"] ?? "")
-        .split("|")
-        .filter((s) => s.trim())
-        .map((seg) => {
-          const m = seg.match(/^(\d+):(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)sft:(\d+)u$/);
-          if (!m) return null;
-          return { bhkCount: Number(m[1]), minSft: Number(m[2]), maxSft: Number(m[3]), unitCount: Number(m[4]) };
-        })
-        .filter(Boolean) as Array<{ bhkCount: number; minSft: number; maxSft: number; unitCount: number }>;
-
+      const configurations = parseConfigurations(r["configurations"] ?? "");
       const photos = (r["photos"] ?? "").split("|").map((s) => s.trim()).filter(Boolean);
       const amenities = (r["amenities"] ?? "").split("|").map((s) => s.trim()).filter(Boolean);
 
@@ -1862,13 +1874,11 @@ app.post("/admin/projects/import", requireAuth, requireRole("super_admin"), expr
               );
             }
           });
-          results.push({ uniqueId: uniqueId!, action: "updated", id: existing.id });
+          results.push({ uniqueId, action: "updated", id: existing.id });
         } else {
           // INSERT path
-          const { randomUUID: uuid } = await import("node:crypto");
-          const UNIQUE_ID_RE = /^PROP-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
           const newUniqueId =
-            uniqueId && UNIQUE_ID_RE.test(uniqueId) ? uniqueId : `PROP-${uuid()}`;
+            uniqueId && UNIQUE_ID_RE.test(uniqueId) ? uniqueId : `PROP-${randomUUID()}`;
 
           const inserted = await withTransaction(async (client) => {
             const ins = await client.query(
