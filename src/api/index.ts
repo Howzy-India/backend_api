@@ -1664,20 +1664,26 @@ function projectToCsvRow(p: any): string {
 }
 
 /** Parse a single RFC-4180 CSV row into an array of field strings. */
+/** Read a quoted CSV field starting just after the opening quote; returns [field, newIndex]. */
+function parseQuotedCsvField(line: string, start: number): [string, number] {
+  let field = "";
+  let i = start;
+  while (i < line.length) {
+    if (line[i] === '"' && line[i + 1] === '"') { field += '"'; i += 2; }
+    else if (line[i] === '"') { i++; break; }
+    else { field += line[i++]; }
+  }
+  return [field, i];
+}
+
 function parseCsvRow(line: string): string[] {
   const fields: string[] = [];
   let i = 0;
   while (i < line.length) {
     if (line[i] === '"') {
-      let field = "";
-      i++;
-      while (i < line.length) {
-        if (line[i] === '"' && line[i + 1] === '"') { field += '"'; i += 2; }
-        else if (line[i] === '"') { i++; break; }
-        else { field += line[i++]; }
-      }
+      const [field, next] = parseQuotedCsvField(line, i + 1);
       fields.push(field);
-      if (line[i] === ",") i++;
+      i = next + (line[next] === "," ? 1 : 0);
     } else {
       const end = line.indexOf(",", i);
       if (end === -1) { fields.push(line.slice(i)); break; }
@@ -1776,6 +1782,147 @@ function validateImportRowFields(r: Record<string, string>): string | null {
   return null;
 }
 
+type CsvRowHelpers = {
+  toNum: (v: string) => number | null;
+  toStr: (v: string) => string | null;
+  callerUid: string;
+};
+
+async function upsertProjectFromCsvRow(
+  r: Record<string, string>,
+  helpers: CsvRowHelpers
+): Promise<{ uniqueId: string; action: "created" | "updated"; id: string }> {
+  const { toNum, toStr, callerUid } = helpers;
+  const uniqueId = r["unique_id"]?.trim() ?? "";
+  const name = r["name"].trim();
+  const city = r["city"].trim();
+  const propertyType = r["property_type"].trim();
+  const configurations = parseConfigurations(r["configurations"] ?? "");
+  const photos = (r["photos"] ?? "").split("|").map((s) => s.trim()).filter(Boolean);
+  const amenities = (r["amenities"] ?? "").split("|").map((s) => s.trim()).filter(Boolean);
+
+  const existing: any = uniqueId
+    ? await queryOne("SELECT id FROM projects WHERE unique_id = $1", [uniqueId])
+    : null;
+
+  if (existing) {
+    await withTransaction(async (client) => {
+      await client.query(
+        `UPDATE projects SET
+          name=$1, developer_name=$2, rera_number=$3, property_type=$4, project_type=$5,
+          project_segment=$6, possession_status=$7, possession_date=$8, address=$9, zone=$10,
+          location=$11, area=$12, city=$13, state=$14, pincode=$15, landmark=$16,
+          map_link=$17, land_parcel=$18, number_of_towers=$19, total_units=$20,
+          available_units=$21, density=$22, sft_costing_per_sqft=$23, emi_starts_from=$24,
+          pricing_two_bhk=$25, pricing_three_bhk=$26, pricing_four_bhk=$27,
+          video_link_3d=$28, brochure_link=$29, onboarding_agreement_link=$30,
+          agreement_percentage=$31, project_manager_name=$32, project_manager_contact=$33,
+          spoc_name=$34, spoc_contact=$35, usp=$36, teaser=$37, details=$38,
+          status=$39, lead_registration_status=$40, updated_by=$41, updated_at=now()
+        WHERE id=$42`,
+        [
+          name, toStr(r["developer_name"]) ?? "", toStr(r["rera_number"]),
+          propertyType, toStr(r["project_type"]), toStr(r["project_segment"]),
+          toStr(r["possession_status"]), toStr(r["possession_date"]), toStr(r["address"]),
+          toStr(r["zone"]), toStr(r["location"]), toStr(r["area"]), city,
+          toStr(r["state"]), toStr(r["pincode"]), toStr(r["landmark"]),
+          toStr(r["map_link"]), toNum(r["land_parcel"]), toNum(r["number_of_towers"]),
+          toNum(r["total_units"]), toNum(r["available_units"]), toStr(r["density"]),
+          toNum(r["sft_costing_per_sqft"]), toStr(r["emi_starts_from"]),
+          toNum(r["pricing_two_bhk"]), toNum(r["pricing_three_bhk"]), toNum(r["pricing_four_bhk"]),
+          toStr(r["video_link_3d"]), toStr(r["brochure_link"]), toStr(r["onboarding_agreement_link"]),
+          toNum(r["agreement_percentage"]),
+          toStr(r["project_manager_name"]), toStr(r["project_manager_contact"]),
+          toStr(r["spoc_name"]), toStr(r["spoc_contact"]),
+          toStr(r["usp"]), toStr(r["teaser"]), toStr(r["details"]),
+          toStr(r["status"]) ?? "ACTIVE", toStr(r["lead_registration_status"]),
+          callerUid, existing.id,
+        ]
+      );
+      await client.query("DELETE FROM configurations WHERE project_id=$1", [existing.id]);
+      for (const cfg of configurations) {
+        await client.query(
+          `INSERT INTO configurations (project_id,bhk_count,min_sft,max_sft,unit_count) VALUES ($1,$2,$3,$4,$5)`,
+          [existing.id, cfg.bhkCount, cfg.minSft, cfg.maxSft, cfg.unitCount]
+        );
+      }
+      await client.query("DELETE FROM project_photos WHERE project_id=$1", [existing.id]);
+      for (let pi = 0; pi < photos.length; pi++) {
+        await client.query(
+          `INSERT INTO project_photos (project_id,url,display_order) VALUES ($1,$2,$3)`,
+          [existing.id, photos[pi], pi]
+        );
+      }
+      await client.query("DELETE FROM project_amenities WHERE project_id=$1", [existing.id]);
+      for (const amenity of amenities) {
+        await client.query(
+          `INSERT INTO project_amenities (project_id,amenity) VALUES ($1,$2)`,
+          [existing.id, amenity]
+        );
+      }
+    });
+    return { uniqueId, action: "updated", id: existing.id };
+  }
+
+  const newUniqueId = uniqueId && UNIQUE_ID_RE.test(uniqueId) ? uniqueId : `PROP-${randomUUID()}`;
+  const inserted = await withTransaction(async (client) => {
+    const ins = await client.query(
+      `INSERT INTO projects (
+        unique_id,name,developer_name,rera_number,property_type,project_type,
+        project_segment,possession_status,possession_date,address,zone,location,
+        area,city,state,pincode,landmark,map_link,land_parcel,number_of_towers,
+        total_units,available_units,density,sft_costing_per_sqft,emi_starts_from,
+        pricing_two_bhk,pricing_three_bhk,pricing_four_bhk,video_link_3d,brochure_link,
+        onboarding_agreement_link,agreement_percentage,project_manager_name,project_manager_contact,
+        spoc_name,spoc_contact,usp,teaser,details,status,lead_registration_status,
+        created_by,updated_by,created_at,updated_at
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
+        $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,now(),now()
+      ) RETURNING id`,
+      [
+        newUniqueId, name, toStr(r["developer_name"]) ?? "", toStr(r["rera_number"]),
+        propertyType, toStr(r["project_type"]), toStr(r["project_segment"]),
+        toStr(r["possession_status"]), toStr(r["possession_date"]), toStr(r["address"]),
+        toStr(r["zone"]), toStr(r["location"]), toStr(r["area"]), city,
+        toStr(r["state"]), toStr(r["pincode"]), toStr(r["landmark"]),
+        toStr(r["map_link"]), toNum(r["land_parcel"]), toNum(r["number_of_towers"]),
+        toNum(r["total_units"]), toNum(r["available_units"]), toStr(r["density"]),
+        toNum(r["sft_costing_per_sqft"]), toStr(r["emi_starts_from"]),
+        toNum(r["pricing_two_bhk"]), toNum(r["pricing_three_bhk"]), toNum(r["pricing_four_bhk"]),
+        toStr(r["video_link_3d"]), toStr(r["brochure_link"]), toStr(r["onboarding_agreement_link"]),
+        toNum(r["agreement_percentage"]),
+        toStr(r["project_manager_name"]), toStr(r["project_manager_contact"]),
+        toStr(r["spoc_name"]), toStr(r["spoc_contact"]),
+        toStr(r["usp"]), toStr(r["teaser"]), toStr(r["details"]),
+        toStr(r["status"]) ?? "ACTIVE", toStr(r["lead_registration_status"]),
+        callerUid, callerUid,
+      ]
+    );
+    const projectId = ins.rows[0].id;
+    for (const cfg of configurations) {
+      await client.query(
+        `INSERT INTO configurations (project_id,bhk_count,min_sft,max_sft,unit_count) VALUES ($1,$2,$3,$4,$5)`,
+        [projectId, cfg.bhkCount, cfg.minSft, cfg.maxSft, cfg.unitCount]
+      );
+    }
+    for (let pi = 0; pi < photos.length; pi++) {
+      await client.query(
+        `INSERT INTO project_photos (project_id,url,display_order) VALUES ($1,$2,$3)`,
+        [projectId, photos[pi], pi]
+      );
+    }
+    for (const amenity of amenities) {
+      await client.query(
+        `INSERT INTO project_amenities (project_id,amenity) VALUES ($1,$2)`,
+        [projectId, amenity]
+      );
+    }
+    return ins.rows[0];
+  });
+  return { uniqueId: newUniqueId, action: "created", id: inserted.id };
+}
+
 // Super admin: import projects from CSV (upsert by unique_id)
 app.post("/admin/projects/import", requireAuth, requireRole("super_admin"), express.text({ type: "text/csv", limit: "10mb" }), async (req, res) => {
   try {
@@ -1792,6 +1939,7 @@ app.post("/admin/projects/import", requireAuth, requireRole("super_admin"), expr
     const errors: Array<{ row: number; uniqueId?: string; error: string }> = [];
     const toNum = (v: string) => v.trim() === "" ? null : Number(v);
     const toStr = (v: string) => v.trim() === "" ? null : v.trim();
+    const helpers: CsvRowHelpers = { toNum, toStr, callerUid };
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
@@ -1800,145 +1948,11 @@ app.post("/admin/projects/import", requireAuth, requireRole("super_admin"), expr
         errors.push({ row: i + 2, uniqueId: r["unique_id"]?.trim(), error: validationError });
         continue;
       }
-      const uniqueId = r["unique_id"]?.trim() ?? "";
-      const name = r["name"].trim();
-      const city = r["city"].trim();
-      const propertyType = r["property_type"].trim();
-
-      const configurations = parseConfigurations(r["configurations"] ?? "");
-      const photos = (r["photos"] ?? "").split("|").map((s) => s.trim()).filter(Boolean);
-      const amenities = (r["amenities"] ?? "").split("|").map((s) => s.trim()).filter(Boolean);
-
       try {
-        const existing: any = uniqueId
-          ? await queryOne("SELECT id FROM projects WHERE unique_id = $1", [uniqueId])
-          : null;
-
-        if (existing) {
-          // UPDATE path — full replace
-          await withTransaction(async (client) => {
-            await client.query(
-              `UPDATE projects SET
-                name=$1, developer_name=$2, rera_number=$3, property_type=$4, project_type=$5,
-                project_segment=$6, possession_status=$7, possession_date=$8, address=$9, zone=$10,
-                location=$11, area=$12, city=$13, state=$14, pincode=$15, landmark=$16,
-                map_link=$17, land_parcel=$18, number_of_towers=$19, total_units=$20,
-                available_units=$21, density=$22, sft_costing_per_sqft=$23, emi_starts_from=$24,
-                pricing_two_bhk=$25, pricing_three_bhk=$26, pricing_four_bhk=$27,
-                video_link_3d=$28, brochure_link=$29, onboarding_agreement_link=$30,
-                agreement_percentage=$31, project_manager_name=$32, project_manager_contact=$33,
-                spoc_name=$34, spoc_contact=$35, usp=$36, teaser=$37, details=$38,
-                status=$39, lead_registration_status=$40, updated_by=$41, updated_at=now()
-              WHERE id=$42`,
-              [
-                name, toStr(r["developer_name"]) ?? "", toStr(r["rera_number"]),
-                propertyType, toStr(r["project_type"]), toStr(r["project_segment"]),
-                toStr(r["possession_status"]), toStr(r["possession_date"]), toStr(r["address"]),
-                toStr(r["zone"]), toStr(r["location"]), toStr(r["area"]), city,
-                toStr(r["state"]), toStr(r["pincode"]), toStr(r["landmark"]),
-                toStr(r["map_link"]), toNum(r["land_parcel"]), toNum(r["number_of_towers"]),
-                toNum(r["total_units"]), toNum(r["available_units"]), toStr(r["density"]),
-                toNum(r["sft_costing_per_sqft"]), toStr(r["emi_starts_from"]),
-                toNum(r["pricing_two_bhk"]), toNum(r["pricing_three_bhk"]), toNum(r["pricing_four_bhk"]),
-                toStr(r["video_link_3d"]), toStr(r["brochure_link"]), toStr(r["onboarding_agreement_link"]),
-                toNum(r["agreement_percentage"]),
-                toStr(r["project_manager_name"]), toStr(r["project_manager_contact"]),
-                toStr(r["spoc_name"]), toStr(r["spoc_contact"]),
-                toStr(r["usp"]), toStr(r["teaser"]), toStr(r["details"]),
-                toStr(r["status"]) ?? "ACTIVE", toStr(r["lead_registration_status"]),
-                callerUid, existing.id,
-              ]
-            );
-            // Replace configurations
-            await client.query("DELETE FROM configurations WHERE project_id=$1", [existing.id]);
-            for (const cfg of configurations) {
-              await client.query(
-                `INSERT INTO configurations (project_id,bhk_count,min_sft,max_sft,unit_count) VALUES ($1,$2,$3,$4,$5)`,
-                [existing.id, cfg.bhkCount, cfg.minSft, cfg.maxSft, cfg.unitCount]
-              );
-            }
-            // Replace photos
-            await client.query("DELETE FROM project_photos WHERE project_id=$1", [existing.id]);
-            for (let pi = 0; pi < photos.length; pi++) {
-              await client.query(
-                `INSERT INTO project_photos (project_id,url,display_order) VALUES ($1,$2,$3)`,
-                [existing.id, photos[pi], pi]
-              );
-            }
-            // Replace amenities
-            await client.query("DELETE FROM project_amenities WHERE project_id=$1", [existing.id]);
-            for (const amenity of amenities) {
-              await client.query(
-                `INSERT INTO project_amenities (project_id,amenity) VALUES ($1,$2)`,
-                [existing.id, amenity]
-              );
-            }
-          });
-          results.push({ uniqueId, action: "updated", id: existing.id });
-        } else {
-          // INSERT path
-          const newUniqueId =
-            uniqueId && UNIQUE_ID_RE.test(uniqueId) ? uniqueId : `PROP-${randomUUID()}`;
-
-          const inserted = await withTransaction(async (client) => {
-            const ins = await client.query(
-              `INSERT INTO projects (
-                unique_id,name,developer_name,rera_number,property_type,project_type,
-                project_segment,possession_status,possession_date,address,zone,location,
-                area,city,state,pincode,landmark,map_link,land_parcel,number_of_towers,
-                total_units,available_units,density,sft_costing_per_sqft,emi_starts_from,
-                pricing_two_bhk,pricing_three_bhk,pricing_four_bhk,video_link_3d,brochure_link,
-                onboarding_agreement_link,agreement_percentage,project_manager_name,project_manager_contact,
-                spoc_name,spoc_contact,usp,teaser,details,status,lead_registration_status,
-                created_by,updated_by,created_at,updated_at
-              ) VALUES (
-                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
-                $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,now(),now()
-              ) RETURNING id`,
-              [
-                newUniqueId, name, toStr(r["developer_name"]) ?? "", toStr(r["rera_number"]),
-                propertyType, toStr(r["project_type"]), toStr(r["project_segment"]),
-                toStr(r["possession_status"]), toStr(r["possession_date"]), toStr(r["address"]),
-                toStr(r["zone"]), toStr(r["location"]), toStr(r["area"]), city,
-                toStr(r["state"]), toStr(r["pincode"]), toStr(r["landmark"]),
-                toStr(r["map_link"]), toNum(r["land_parcel"]), toNum(r["number_of_towers"]),
-                toNum(r["total_units"]), toNum(r["available_units"]), toStr(r["density"]),
-                toNum(r["sft_costing_per_sqft"]), toStr(r["emi_starts_from"]),
-                toNum(r["pricing_two_bhk"]), toNum(r["pricing_three_bhk"]), toNum(r["pricing_four_bhk"]),
-                toStr(r["video_link_3d"]), toStr(r["brochure_link"]), toStr(r["onboarding_agreement_link"]),
-                toNum(r["agreement_percentage"]),
-                toStr(r["project_manager_name"]), toStr(r["project_manager_contact"]),
-                toStr(r["spoc_name"]), toStr(r["spoc_contact"]),
-                toStr(r["usp"]), toStr(r["teaser"]), toStr(r["details"]),
-                toStr(r["status"]) ?? "ACTIVE", toStr(r["lead_registration_status"]),
-                callerUid, callerUid,
-              ]
-            );
-            const projectId = ins.rows[0].id;
-            for (const cfg of configurations) {
-              await client.query(
-                `INSERT INTO configurations (project_id,bhk_count,min_sft,max_sft,unit_count) VALUES ($1,$2,$3,$4,$5)`,
-                [projectId, cfg.bhkCount, cfg.minSft, cfg.maxSft, cfg.unitCount]
-              );
-            }
-            for (let pi = 0; pi < photos.length; pi++) {
-              await client.query(
-                `INSERT INTO project_photos (project_id,url,display_order) VALUES ($1,$2,$3)`,
-                [projectId, photos[pi], pi]
-              );
-            }
-            for (const amenity of amenities) {
-              await client.query(
-                `INSERT INTO project_amenities (project_id,amenity) VALUES ($1,$2)`,
-                [projectId, amenity]
-              );
-            }
-            return ins.rows[0];
-          });
-          results.push({ uniqueId: newUniqueId, action: "created", id: inserted.id });
-        }
+        const result = await upsertProjectFromCsvRow(r, helpers);
+        results.push(result);
       } catch (rowErr) {
-        errors.push({ row: i + 2, uniqueId, error: String((rowErr as Error).message) });
+        errors.push({ row: i + 2, uniqueId: r["unique_id"]?.trim(), error: String((rowErr as Error).message) });
       }
     }
 
