@@ -32,7 +32,7 @@
 ### Cloud SQL Schema
 
 ```
-projects (44 fields)
+projects (53 fields)
 ├── id UUID PK
 ├── unique_id TEXT UNIQUE           -- PROP-<uuid>
 ├── name TEXT
@@ -58,17 +58,26 @@ projects (44 fields)
 ├── available_units INT
 ├── density ENUM                    -- LOW_DENSITY | MEDIUM_DENSITY | HIGH_DENSITY
 ├── sft_costing_per_sqft NUMERIC
-├── emi_starts_from TEXT
 ├── pricing_two_bhk NUMERIC
 ├── pricing_three_bhk NUMERIC
 ├── pricing_four_bhk NUMERIC
 ├── video_link_3d TEXT
 ├── brochure_link TEXT
 ├── onboarding_agreement_link TEXT
+├── agreement_percentage NUMERIC
 ├── project_manager_name TEXT
 ├── project_manager_contact TEXT
+├── project_manager_email TEXT
 ├── spoc_name TEXT
 ├── spoc_contact TEXT
+├── spoc_email TEXT
+├── lead_registration_type TEXT
+├── lead_registration_email TEXT
+├── lead_registration_app_link TEXT
+├── lead_registration_app_id TEXT
+├── lead_registration_app_password TEXT
+├── commission_type TEXT
+├── commission_value NUMERIC
 ├── usp TEXT
 ├── teaser TEXT
 ├── details TEXT
@@ -166,7 +175,7 @@ Cloud Function (Express)
 |---|---|---|---|
 | `GET` | `/projects` | Public | List with filters: city, zone, status, type, q (FTS), after (cursor) |
 | `GET` | `/projects/:id` | Public | Full project + configs + photos + amenities |
-| `POST` | `/admin/properties` | admin, super_admin | Create project (all 44 fields + nested) |
+| `POST` | `/admin/properties` | admin, super_admin | Create project (all 53 fields + nested) |
 | `PATCH` | `/admin/properties/:id` | admin, super_admin | Partial update |
 | `DELETE` | `/admin/properties/:id` | admin, super_admin | Soft delete (INACTIVE) |
 | `GET` | `/admin/settings/backup-sheet` | super_admin | Returns Google Sheet URL |
@@ -269,7 +278,7 @@ App.tsx
 └── [role-based dashboard]
     ├── SuperAdminDashboard.tsx     -- super_admin view
     │   ├── Projects tab → PropertyListSection
-    │   │   └── CreateProjectModal.tsx  (all 44 fields, single-page sectioned)
+    │   │   └── CreateProjectModal.tsx  (all 53 fields, single-page sectioned)
     │   ├── Resale Properties tab → ResalePropertiesAdmin
     │   │   ├── Add Resale form (inline, file upload for floor plan)
     │   │   ├── Status filter (Pending / Listed / Rejected)
