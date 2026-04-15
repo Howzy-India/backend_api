@@ -1818,6 +1818,37 @@ function buildProjectParams(
   ];
 }
 
+/** (Re)inserts configurations, photos and amenities for a project, replacing any existing rows. */
+async function replaceProjectRelations(
+  client: { query: (sql: string, params?: any[]) => Promise<any> },
+  projectId: string,
+  configurations: CsvConfig[],
+  photos: string[],
+  amenities: string[]
+): Promise<void> {
+  await client.query("DELETE FROM configurations WHERE project_id=$1", [projectId]);
+  for (const cfg of configurations) {
+    await client.query(
+      `INSERT INTO configurations (project_id,bhk_count,min_sft,max_sft,unit_count) VALUES ($1,$2,$3,$4,$5)`,
+      [projectId, cfg.bhkCount, cfg.minSft, cfg.maxSft, cfg.unitCount]
+    );
+  }
+  await client.query("DELETE FROM project_photos WHERE project_id=$1", [projectId]);
+  for (let pi = 0; pi < photos.length; pi++) {
+    await client.query(
+      `INSERT INTO project_photos (project_id,url,display_order) VALUES ($1,$2,$3)`,
+      [projectId, photos[pi], pi]
+    );
+  }
+  await client.query("DELETE FROM project_amenities WHERE project_id=$1", [projectId]);
+  for (const amenity of amenities) {
+    await client.query(
+      `INSERT INTO project_amenities (project_id,amenity) VALUES ($1,$2)`,
+      [projectId, amenity]
+    );
+  }
+}
+
 async function upsertProjectFromCsvRow(
   r: Record<string, string>,
   helpers: CsvRowHelpers
@@ -1853,27 +1884,7 @@ async function upsertProjectFromCsvRow(
         WHERE id=$42`,
         [...params, existing.id]
       );
-      await client.query("DELETE FROM configurations WHERE project_id=$1", [existing.id]);
-      for (const cfg of configurations) {
-        await client.query(
-          `INSERT INTO configurations (project_id,bhk_count,min_sft,max_sft,unit_count) VALUES ($1,$2,$3,$4,$5)`,
-          [existing.id, cfg.bhkCount, cfg.minSft, cfg.maxSft, cfg.unitCount]
-        );
-      }
-      await client.query("DELETE FROM project_photos WHERE project_id=$1", [existing.id]);
-      for (let pi = 0; pi < photos.length; pi++) {
-        await client.query(
-          `INSERT INTO project_photos (project_id,url,display_order) VALUES ($1,$2,$3)`,
-          [existing.id, photos[pi], pi]
-        );
-      }
-      await client.query("DELETE FROM project_amenities WHERE project_id=$1", [existing.id]);
-      for (const amenity of amenities) {
-        await client.query(
-          `INSERT INTO project_amenities (project_id,amenity) VALUES ($1,$2)`,
-          [existing.id, amenity]
-        );
-      }
+      await replaceProjectRelations(client, existing.id, configurations, photos, amenities);
     });
     return { uniqueId, action: "updated", id: existing.id };
   }
@@ -1898,24 +1909,7 @@ async function upsertProjectFromCsvRow(
       [newUniqueId, ...params, callerUid]
     );
     const projectId = ins.rows[0].id;
-    for (const cfg of configurations) {
-      await client.query(
-        `INSERT INTO configurations (project_id,bhk_count,min_sft,max_sft,unit_count) VALUES ($1,$2,$3,$4,$5)`,
-        [projectId, cfg.bhkCount, cfg.minSft, cfg.maxSft, cfg.unitCount]
-      );
-    }
-    for (let pi = 0; pi < photos.length; pi++) {
-      await client.query(
-        `INSERT INTO project_photos (project_id,url,display_order) VALUES ($1,$2,$3)`,
-        [projectId, photos[pi], pi]
-      );
-    }
-    for (const amenity of amenities) {
-      await client.query(
-        `INSERT INTO project_amenities (project_id,amenity) VALUES ($1,$2)`,
-        [projectId, amenity]
-      );
-    }
+    await replaceProjectRelations(client, projectId, configurations, photos, amenities);
     return ins.rows[0];
   });
   return { uniqueId: newUniqueId, action: "created", id: inserted.id };
