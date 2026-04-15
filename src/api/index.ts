@@ -1327,11 +1327,16 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
           total_units, available_units, density, sft_costing_per_sqft, emi_starts_from,
           pricing_two_bhk, pricing_three_bhk, pricing_four_bhk, video_link_3d, brochure_link,
           onboarding_agreement_link, agreement_percentage, project_manager_name, project_manager_contact,
-          spoc_name, spoc_contact, usp, teaser, details, status, lead_registration_status,
+          project_manager_email, spoc_name, spoc_contact, spoc_email,
+          lead_registration_type, lead_registration_email, lead_registration_app_link,
+          lead_registration_app_id, lead_registration_app_password,
+          commission_type, commission_value,
+          usp, teaser, details, status, lead_registration_status,
           created_by, updated_by, created_at, updated_at
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
-          $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,now(),now()
+          $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,
+          $39,$40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,$52,now(),now()
         ) RETURNING *`,
         [
           uniqueId, String(body.name).trim(), body.developerName ?? "",
@@ -1346,8 +1351,13 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
           body.pricingTwoBhk ?? null, body.pricingThreeBhk ?? null, body.pricingFourBhk ?? null,
           body.videoLink3D ?? null, body.brochureLink ?? null,
           body.onboardingAgreementLink ?? null, body.agreementPercentage ?? null,
-          body.projectManagerName ?? null,
-          body.projectManagerContact ?? null, body.spocName ?? null, body.spocContact ?? null,
+          body.projectManagerName ?? null, body.projectManagerContact ?? null,
+          body.projectManagerEmail ?? null,
+          body.spocName ?? null, body.spocContact ?? null, body.spocEmail ?? null,
+          body.leadRegistrationType ?? null, body.leadRegistrationEmail ?? null,
+          body.leadRegistrationAppLink ?? null, body.leadRegistrationAppId ?? null,
+          body.leadRegistrationAppPassword ?? null,
+          body.commissionType ?? null, body.commissionValue ?? null,
           body.usp ?? null, body.teaser ?? null, body.details ?? null,
           projectStatus, null, callerUid, callerUid,
         ]
@@ -1474,7 +1484,15 @@ async function applyProjectUpdate(
       agreementPercentage: "agreement_percentage",
       projectManagerName: "project_manager_name",
       projectManagerContact: "project_manager_contact",
-      spocName: "spoc_name", spocContact: "spoc_contact",
+      projectManagerEmail: "project_manager_email",
+      spocName: "spoc_name", spocContact: "spoc_contact", spocEmail: "spoc_email",
+      leadRegistrationType: "lead_registration_type",
+      leadRegistrationEmail: "lead_registration_email",
+      leadRegistrationAppLink: "lead_registration_app_link",
+      leadRegistrationAppId: "lead_registration_app_id",
+      leadRegistrationAppPassword: "lead_registration_app_password", // NOSONAR - this is a column name, not a credential
+      commissionType: "commission_type",
+      commissionValue: "commission_value",
       usp: "usp", teaser: "teaser", details: "details", status: "status",
     };
 
@@ -1624,7 +1642,11 @@ const CSV_HEADERS = [
   "pricing_two_bhk", "pricing_three_bhk", "pricing_four_bhk",
   "video_link_3d", "brochure_link", "onboarding_agreement_link",
   "agreement_percentage", "project_manager_name", "project_manager_contact",
-  "spoc_name", "spoc_contact", "usp", "teaser", "details",
+  "project_manager_email", "spoc_name", "spoc_contact", "spoc_email",
+  "lead_registration_type", "lead_registration_email",
+  "lead_registration_app_link", "lead_registration_app_id", "lead_registration_app_password",
+  "commission_type", "commission_value",
+  "usp", "teaser", "details",
   "status", "lead_registration_status",
   "configurations", "photos", "amenities",
 ];
@@ -1654,8 +1676,11 @@ function projectToCsvRow(p: any): string {
     p.pricing?.twoBhk, p.pricing?.threeBhk, p.pricing?.fourBhk,
     p.videoLink3D, p.brochureLink, p.onboardingAgreementLink,
     p.agreementPercentage,
-    p.projectManager?.name, p.projectManager?.contact,
-    p.spoc?.name, p.spoc?.contact,
+    p.projectManager?.name, p.projectManager?.contact, p.projectManager?.email,
+    p.spoc?.name, p.spoc?.contact, p.spoc?.email,
+    p.leadRegistrationType, p.leadRegistrationEmail,
+    p.leadRegistrationAppLink, p.leadRegistrationAppId, p.leadRegistrationAppPassword,
+    p.commissionType, p.commissionValue,
     p.usp, p.teaser, p.details,
     p.status, p.leadRegistrationStatus,
     configs, photos, amenities,
@@ -1788,7 +1813,7 @@ type CsvRowHelpers = {
   callerUid: string;
 };
 
-/** Builds the shared 40-field project values array used by both INSERT and UPDATE. */
+/** Builds the shared project values array used by both INSERT and UPDATE in CSV import. */
 function buildProjectParams(
   r: Record<string, string>,
   name: string,
@@ -1811,7 +1836,12 @@ function buildProjectParams(
     toStr(r["video_link_3d"]), toStr(r["brochure_link"]), toStr(r["onboarding_agreement_link"]),
     toNum(r["agreement_percentage"]),
     toStr(r["project_manager_name"]), toStr(r["project_manager_contact"]),
-    toStr(r["spoc_name"]), toStr(r["spoc_contact"]),
+    toStr(r["project_manager_email"]),
+    toStr(r["spoc_name"]), toStr(r["spoc_contact"]), toStr(r["spoc_email"]),
+    toStr(r["lead_registration_type"]), toStr(r["lead_registration_email"]),
+    toStr(r["lead_registration_app_link"]), toStr(r["lead_registration_app_id"]),
+    toStr(r["lead_registration_app_password"]),
+    toStr(r["commission_type"]), toNum(r["commission_value"]),
     toStr(r["usp"]), toStr(r["teaser"]), toStr(r["details"]),
     toStr(r["status"]) ?? "ACTIVE", toStr(r["lead_registration_status"]),
     callerUid,
@@ -1879,9 +1909,15 @@ async function upsertProjectFromCsvRow(
           pricing_two_bhk=$25, pricing_three_bhk=$26, pricing_four_bhk=$27,
           video_link_3d=$28, brochure_link=$29, onboarding_agreement_link=$30,
           agreement_percentage=$31, project_manager_name=$32, project_manager_contact=$33,
-          spoc_name=$34, spoc_contact=$35, usp=$36, teaser=$37, details=$38,
-          status=$39, lead_registration_status=$40, updated_by=$41, updated_at=now()
-        WHERE id=$42`,
+          project_manager_email=$34,
+          spoc_name=$35, spoc_contact=$36, spoc_email=$37,
+          lead_registration_type=$38, lead_registration_email=$39,
+          lead_registration_app_link=$40, lead_registration_app_id=$41,
+          lead_registration_app_password=$42,
+          commission_type=$43, commission_value=$44,
+          usp=$45, teaser=$46, details=$47,
+          status=$48, lead_registration_status=$49, updated_by=$50, updated_at=now()
+        WHERE id=$51`,
         [...params, existing.id]
       );
       await replaceProjectRelations(client, existing.id, configurations, photos, amenities);
@@ -1900,11 +1936,16 @@ async function upsertProjectFromCsvRow(
         total_units,available_units,density,sft_costing_per_sqft,emi_starts_from,
         pricing_two_bhk,pricing_three_bhk,pricing_four_bhk,video_link_3d,brochure_link,
         onboarding_agreement_link,agreement_percentage,project_manager_name,project_manager_contact,
-        spoc_name,spoc_contact,usp,teaser,details,status,lead_registration_status,
+        project_manager_email,spoc_name,spoc_contact,spoc_email,
+        lead_registration_type,lead_registration_email,
+        lead_registration_app_link,lead_registration_app_id,lead_registration_app_password,
+        commission_type,commission_value,
+        usp,teaser,details,status,lead_registration_status,
         created_by,updated_by,created_at,updated_at
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
-        $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,now(),now()
+        $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,
+        $39,$40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,$52,now(),now()
       ) RETURNING id`,
       [newUniqueId, ...params, callerUid]
     );
@@ -2999,7 +3040,7 @@ app.patch("/resale/:id/delegate", requireAuth, async (req, res) => {
   const { id } = req.params;
   const { agentName, agentPhone } = req.body;
   try {
-    const result = await getOwnedPendingResaleDoc(id, (req as any).user.uid);
+    const result = await getOwnedPendingResaleDoc(id, req.user!.uid);
     if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
     await result.docRef.update({ agentName: agentName ?? null, agentPhone: agentPhone ?? null, updatedAt: new Date() });
     const updated = await result.docRef.get();
@@ -3014,7 +3055,7 @@ app.patch("/resale/:id/delegate", requireAuth, async (req, res) => {
 app.patch("/resale/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await getOwnedPendingResaleDoc(id, (req as any).user.uid);
+    const result = await getOwnedPendingResaleDoc(id, req.user!.uid);
     if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
     const updates: Record<string, any> = {};
     for (const field of RESALE_EDITABLE_FIELDS) {
