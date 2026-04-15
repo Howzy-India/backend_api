@@ -71,6 +71,8 @@ export interface ProjectRow {
   status: ProjectStatus;
   lead_registration_status: string | null;
   rejection_reason: string | null;
+  submitted_by_name: string | null;
+  submitted_by_mobile: string | null;
   created_by: string | null;
   updated_by: string | null;
   created_at: Date;
@@ -159,6 +161,8 @@ export interface ProjectResponse {
   status: ProjectStatus;
   leadRegistrationStatus: string | null;
   rejectionReason: string | null;
+  submittedByName: string | null;
+  submittedByMobile: string | null;
   createdAt: string | null;
   updatedAt: string | null;
   configurations: ConfigurationResponse[];
@@ -214,6 +218,8 @@ export interface CreateProjectInput {
   leadRegistrationAppPassword?: string;
   commissionType?: string;
   commissionValue?: number;
+  submittedByName?: string;
+  submittedByMobile?: string;
   usp?: string;
   teaser?: string;
   details?: string;
