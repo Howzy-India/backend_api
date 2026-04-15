@@ -105,8 +105,21 @@ type Project @table(name: "projects", singular: "project", plural: "projects") {
   # ── Contacts ──
   projectManagerName:    String @col(name: "project_manager_name")
   projectManagerContact: String @col(name: "project_manager_contact")
+  projectManagerEmail:   String @col(name: "project_manager_email")
   spocName:              String @col(name: "spoc_name")
   spocContact:           String @col(name: "spoc_contact")
+  spocEmail:             String @col(name: "spoc_email")
+
+  # ── Lead Registration ──
+  leadRegistrationType:         String @col(name: "lead_registration_type")
+  leadRegistrationEmail:        String @col(name: "lead_registration_email")
+  leadRegistrationAppLink:      String @col(name: "lead_registration_app_link")
+  leadRegistrationAppId:        String @col(name: "lead_registration_app_id")
+  leadRegistrationAppPassword:  String @col(name: "lead_registration_app_password")
+
+  # ── Commission ──
+  commissionType:  String @col(name: "commission_type")
+  commissionValue: Float  @col(name: "commission_value")
 
   # ── Marketing ──
   usp:     String
