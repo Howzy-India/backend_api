@@ -1324,7 +1324,7 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
           unique_id, name, developer_name, rera_number, property_type, project_type,
           project_segment, possession_status, possession_date, address, zone, location,
           area, city, state, pincode, landmark, map_link, land_parcel, number_of_towers,
-          total_units, available_units, density, sft_costing_per_sqft, emi_starts_from,
+          total_units, available_units, density, sft_costing_per_sqft,
           pricing_two_bhk, pricing_three_bhk, pricing_four_bhk, video_link_3d, brochure_link,
           onboarding_agreement_link, agreement_percentage, project_manager_name, project_manager_contact,
           project_manager_email, spoc_name, spoc_contact, spoc_email,
@@ -1336,7 +1336,7 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
           $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,
-          $39,$40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,$52,now(),now()
+          $39,$40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,now(),now()
         ) RETURNING *`,
         [
           uniqueId, String(body.name).trim(), body.developerName ?? "",
@@ -1347,7 +1347,7 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
           body.pincode ?? null, body.landmark ?? null, body.mapLink ?? null,
           body.landParcel ?? null, body.numberOfTowers ?? null,
           body.totalUnits ?? null, body.availableUnits ?? null, body.density ?? null,
-          body.sftCostingPerSqft ?? null, body.emiStartsFrom ?? null,
+          body.sftCostingPerSqft ?? null,
           body.pricingTwoBhk ?? null, body.pricingThreeBhk ?? null, body.pricingFourBhk ?? null,
           body.videoLink3D ?? null, body.brochureLink ?? null,
           body.onboardingAgreementLink ?? null, body.agreementPercentage ?? null,
@@ -1477,7 +1477,7 @@ async function applyProjectUpdate(
       landParcel: "land_parcel", numberOfTowers: "number_of_towers",
       totalUnits: "total_units", availableUnits: "available_units",
       density: "density", sftCostingPerSqft: "sft_costing_per_sqft",
-      emiStartsFrom: "emi_starts_from", pricingTwoBhk: "pricing_two_bhk",
+      pricingTwoBhk: "pricing_two_bhk",
       pricingThreeBhk: "pricing_three_bhk", pricingFourBhk: "pricing_four_bhk",
       videoLink3D: "video_link_3d", brochureLink: "brochure_link",
       onboardingAgreementLink: "onboarding_agreement_link",
@@ -1638,7 +1638,7 @@ const CSV_HEADERS = [
   "project_type", "project_segment", "possession_status", "possession_date",
   "address", "zone", "location", "area", "city", "state", "pincode",
   "landmark", "map_link", "land_parcel", "number_of_towers", "total_units",
-  "available_units", "density", "sft_costing_per_sqft", "emi_starts_from",
+  "available_units", "density", "sft_costing_per_sqft",
   "pricing_two_bhk", "pricing_three_bhk", "pricing_four_bhk",
   "video_link_3d", "brochure_link", "onboarding_agreement_link",
   "agreement_percentage", "project_manager_name", "project_manager_contact",
@@ -1672,8 +1672,9 @@ function projectToCsvRow(p: any): string {
     p.projectType, p.projectSegment, p.possessionStatus, p.possessionDate,
     p.address, p.zone, p.location, p.area, p.city, p.state, p.pincode,
     p.landmark, p.mapLink, p.landParcel, p.numberOfTowers, p.totalUnits,
-    p.availableUnits, p.density, p.sftCostingPerSqft, p.emiStartsFrom,
+    p.availableUnits, p.density, p.sftCostingPerSqft,
     p.pricing?.twoBhk, p.pricing?.threeBhk, p.pricing?.fourBhk,
+
     p.videoLink3D, p.brochureLink, p.onboardingAgreementLink,
     p.agreementPercentage,
     p.projectManager?.name, p.projectManager?.contact, p.projectManager?.email,
@@ -1831,7 +1832,7 @@ function buildProjectParams(
     toStr(r["state"]), toStr(r["pincode"]), toStr(r["landmark"]),
     toStr(r["map_link"]), toNum(r["land_parcel"]), toNum(r["number_of_towers"]),
     toNum(r["total_units"]), toNum(r["available_units"]), toStr(r["density"]),
-    toNum(r["sft_costing_per_sqft"]), toStr(r["emi_starts_from"]),
+    toNum(r["sft_costing_per_sqft"]),
     toNum(r["pricing_two_bhk"]), toNum(r["pricing_three_bhk"]), toNum(r["pricing_four_bhk"]),
     toStr(r["video_link_3d"]), toStr(r["brochure_link"]), toStr(r["onboarding_agreement_link"]),
     toNum(r["agreement_percentage"]),
@@ -1905,19 +1906,19 @@ async function upsertProjectFromCsvRow(
           project_segment=$6, possession_status=$7, possession_date=$8, address=$9, zone=$10,
           location=$11, area=$12, city=$13, state=$14, pincode=$15, landmark=$16,
           map_link=$17, land_parcel=$18, number_of_towers=$19, total_units=$20,
-          available_units=$21, density=$22, sft_costing_per_sqft=$23, emi_starts_from=$24,
-          pricing_two_bhk=$25, pricing_three_bhk=$26, pricing_four_bhk=$27,
-          video_link_3d=$28, brochure_link=$29, onboarding_agreement_link=$30,
-          agreement_percentage=$31, project_manager_name=$32, project_manager_contact=$33,
-          project_manager_email=$34,
-          spoc_name=$35, spoc_contact=$36, spoc_email=$37,
-          lead_registration_type=$38, lead_registration_email=$39,
-          lead_registration_app_link=$40, lead_registration_app_id=$41,
-          lead_registration_app_password=$42,
-          commission_type=$43, commission_value=$44,
-          usp=$45, teaser=$46, details=$47,
-          status=$48, lead_registration_status=$49, updated_by=$50, updated_at=now()
-        WHERE id=$51`,
+          available_units=$21, density=$22, sft_costing_per_sqft=$23,
+          pricing_two_bhk=$24, pricing_three_bhk=$25, pricing_four_bhk=$26,
+          video_link_3d=$27, brochure_link=$28, onboarding_agreement_link=$29,
+          agreement_percentage=$30, project_manager_name=$31, project_manager_contact=$32,
+          project_manager_email=$33,
+          spoc_name=$34, spoc_contact=$35, spoc_email=$36,
+          lead_registration_type=$37, lead_registration_email=$38,
+          lead_registration_app_link=$39, lead_registration_app_id=$40,
+          lead_registration_app_password=$41,
+          commission_type=$42, commission_value=$43,
+          usp=$44, teaser=$45, details=$46,
+          status=$47, lead_registration_status=$48, updated_by=$49, updated_at=now()
+        WHERE id=$50`,
         [...params, existing.id]
       );
       await replaceProjectRelations(client, existing.id, configurations, photos, amenities);
@@ -1933,7 +1934,7 @@ async function upsertProjectFromCsvRow(
         unique_id,name,developer_name,rera_number,property_type,project_type,
         project_segment,possession_status,possession_date,address,zone,location,
         area,city,state,pincode,landmark,map_link,land_parcel,number_of_towers,
-        total_units,available_units,density,sft_costing_per_sqft,emi_starts_from,
+        total_units,available_units,density,sft_costing_per_sqft,
         pricing_two_bhk,pricing_three_bhk,pricing_four_bhk,video_link_3d,brochure_link,
         onboarding_agreement_link,agreement_percentage,project_manager_name,project_manager_contact,
         project_manager_email,spoc_name,spoc_contact,spoc_email,
@@ -1945,7 +1946,7 @@ async function upsertProjectFromCsvRow(
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
         $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,
-        $39,$40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,$52,now(),now()
+        $39,$40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,now(),now()
       ) RETURNING id`,
       [newUniqueId, ...params, callerUid]
     );
