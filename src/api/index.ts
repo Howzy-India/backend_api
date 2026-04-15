@@ -3282,8 +3282,8 @@ app.post("/chat/tts", async (req, res) => {
     });
 
     if (!ttsRes.ok) {
-      const errText = await ttsRes.text();
-      console.error("Google TTS error:", errText.slice(0, 200));
+      await ttsRes.text();
+      console.error("Google TTS request failed with status", ttsRes.status);
       res.status(502).json({ error: "TTS generation failed" });
       return;
     }
