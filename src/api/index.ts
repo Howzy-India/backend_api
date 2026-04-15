@@ -1490,7 +1490,7 @@ async function applyProjectUpdate(
       leadRegistrationEmail: "lead_registration_email",
       leadRegistrationAppLink: "lead_registration_app_link",
       leadRegistrationAppId: "lead_registration_app_id",
-      leadRegistrationAppPassword: "lead_registration_app_password",
+      leadRegistrationAppPassword: "lead_registration_app_password", // NOSONAR - this is a column name, not a credential
       commissionType: "commission_type",
       commissionValue: "commission_value",
       usp: "usp", teaser: "teaser", details: "details", status: "status",
@@ -3040,7 +3040,7 @@ app.patch("/resale/:id/delegate", requireAuth, async (req, res) => {
   const { id } = req.params;
   const { agentName, agentPhone } = req.body;
   try {
-    const result = await getOwnedPendingResaleDoc(id, (req as any).user.uid);
+    const result = await getOwnedPendingResaleDoc(id, req.user!.uid);
     if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
     await result.docRef.update({ agentName: agentName ?? null, agentPhone: agentPhone ?? null, updatedAt: new Date() });
     const updated = await result.docRef.get();
@@ -3055,7 +3055,7 @@ app.patch("/resale/:id/delegate", requireAuth, async (req, res) => {
 app.patch("/resale/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await getOwnedPendingResaleDoc(id, (req as any).user.uid);
+    const result = await getOwnedPendingResaleDoc(id, req.user!.uid);
     if ("error" in result) { res.status(result.status).json({ error: result.error }); return; }
     const updates: Record<string, any> = {};
     for (const field of RESALE_EDITABLE_FIELDS) {
