@@ -91,7 +91,6 @@ type Project @table(name: "projects", singular: "project", plural: "projects") {
 
   # ── Pricing ──
   sftCostingPerSqft: Int    @col(name: "sft_costing_per_sqft")
-  emiStartsFrom:     String @col(name: "emi_starts_from")
   pricingTwoBhk:     Int    @col(name: "pricing_two_bhk")
   pricingThreeBhk:   Int    @col(name: "pricing_three_bhk")
   pricingFourBhk:    Int    @col(name: "pricing_four_bhk")
