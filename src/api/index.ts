@@ -1788,11 +1788,41 @@ type CsvRowHelpers = {
   callerUid: string;
 };
 
+/** Builds the shared 40-field project values array used by both INSERT and UPDATE. */
+function buildProjectParams(
+  r: Record<string, string>,
+  name: string,
+  city: string,
+  propertyType: string,
+  callerUid: string,
+  helpers: CsvRowHelpers
+): (string | number | null)[] {
+  const { toNum, toStr } = helpers;
+  return [
+    name, toStr(r["developer_name"]) ?? "", toStr(r["rera_number"]),
+    propertyType, toStr(r["project_type"]), toStr(r["project_segment"]),
+    toStr(r["possession_status"]), toStr(r["possession_date"]), toStr(r["address"]),
+    toStr(r["zone"]), toStr(r["location"]), toStr(r["area"]), city,
+    toStr(r["state"]), toStr(r["pincode"]), toStr(r["landmark"]),
+    toStr(r["map_link"]), toNum(r["land_parcel"]), toNum(r["number_of_towers"]),
+    toNum(r["total_units"]), toNum(r["available_units"]), toStr(r["density"]),
+    toNum(r["sft_costing_per_sqft"]), toStr(r["emi_starts_from"]),
+    toNum(r["pricing_two_bhk"]), toNum(r["pricing_three_bhk"]), toNum(r["pricing_four_bhk"]),
+    toStr(r["video_link_3d"]), toStr(r["brochure_link"]), toStr(r["onboarding_agreement_link"]),
+    toNum(r["agreement_percentage"]),
+    toStr(r["project_manager_name"]), toStr(r["project_manager_contact"]),
+    toStr(r["spoc_name"]), toStr(r["spoc_contact"]),
+    toStr(r["usp"]), toStr(r["teaser"]), toStr(r["details"]),
+    toStr(r["status"]) ?? "ACTIVE", toStr(r["lead_registration_status"]),
+    callerUid,
+  ];
+}
+
 async function upsertProjectFromCsvRow(
   r: Record<string, string>,
   helpers: CsvRowHelpers
 ): Promise<{ uniqueId: string; action: "created" | "updated"; id: string }> {
-  const { toNum, toStr, callerUid } = helpers;
+  const { callerUid } = helpers;
   const uniqueId = r["unique_id"]?.trim() ?? "";
   const name = r["name"].trim();
   const city = r["city"].trim();
@@ -1807,6 +1837,7 @@ async function upsertProjectFromCsvRow(
 
   if (existing) {
     await withTransaction(async (client) => {
+      const params = buildProjectParams(r, name, city, propertyType, callerUid, helpers);
       await client.query(
         `UPDATE projects SET
           name=$1, developer_name=$2, rera_number=$3, property_type=$4, project_type=$5,
@@ -1820,24 +1851,7 @@ async function upsertProjectFromCsvRow(
           spoc_name=$34, spoc_contact=$35, usp=$36, teaser=$37, details=$38,
           status=$39, lead_registration_status=$40, updated_by=$41, updated_at=now()
         WHERE id=$42`,
-        [
-          name, toStr(r["developer_name"]) ?? "", toStr(r["rera_number"]),
-          propertyType, toStr(r["project_type"]), toStr(r["project_segment"]),
-          toStr(r["possession_status"]), toStr(r["possession_date"]), toStr(r["address"]),
-          toStr(r["zone"]), toStr(r["location"]), toStr(r["area"]), city,
-          toStr(r["state"]), toStr(r["pincode"]), toStr(r["landmark"]),
-          toStr(r["map_link"]), toNum(r["land_parcel"]), toNum(r["number_of_towers"]),
-          toNum(r["total_units"]), toNum(r["available_units"]), toStr(r["density"]),
-          toNum(r["sft_costing_per_sqft"]), toStr(r["emi_starts_from"]),
-          toNum(r["pricing_two_bhk"]), toNum(r["pricing_three_bhk"]), toNum(r["pricing_four_bhk"]),
-          toStr(r["video_link_3d"]), toStr(r["brochure_link"]), toStr(r["onboarding_agreement_link"]),
-          toNum(r["agreement_percentage"]),
-          toStr(r["project_manager_name"]), toStr(r["project_manager_contact"]),
-          toStr(r["spoc_name"]), toStr(r["spoc_contact"]),
-          toStr(r["usp"]), toStr(r["teaser"]), toStr(r["details"]),
-          toStr(r["status"]) ?? "ACTIVE", toStr(r["lead_registration_status"]),
-          callerUid, existing.id,
-        ]
+        [...params, existing.id]
       );
       await client.query("DELETE FROM configurations WHERE project_id=$1", [existing.id]);
       for (const cfg of configurations) {
@@ -1866,6 +1880,7 @@ async function upsertProjectFromCsvRow(
 
   const newUniqueId = uniqueId && UNIQUE_ID_RE.test(uniqueId) ? uniqueId : `PROP-${randomUUID()}`;
   const inserted = await withTransaction(async (client) => {
+    const params = buildProjectParams(r, name, city, propertyType, callerUid, helpers);
     const ins = await client.query(
       `INSERT INTO projects (
         unique_id,name,developer_name,rera_number,property_type,project_type,
@@ -1880,24 +1895,7 @@ async function upsertProjectFromCsvRow(
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
         $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,now(),now()
       ) RETURNING id`,
-      [
-        newUniqueId, name, toStr(r["developer_name"]) ?? "", toStr(r["rera_number"]),
-        propertyType, toStr(r["project_type"]), toStr(r["project_segment"]),
-        toStr(r["possession_status"]), toStr(r["possession_date"]), toStr(r["address"]),
-        toStr(r["zone"]), toStr(r["location"]), toStr(r["area"]), city,
-        toStr(r["state"]), toStr(r["pincode"]), toStr(r["landmark"]),
-        toStr(r["map_link"]), toNum(r["land_parcel"]), toNum(r["number_of_towers"]),
-        toNum(r["total_units"]), toNum(r["available_units"]), toStr(r["density"]),
-        toNum(r["sft_costing_per_sqft"]), toStr(r["emi_starts_from"]),
-        toNum(r["pricing_two_bhk"]), toNum(r["pricing_three_bhk"]), toNum(r["pricing_four_bhk"]),
-        toStr(r["video_link_3d"]), toStr(r["brochure_link"]), toStr(r["onboarding_agreement_link"]),
-        toNum(r["agreement_percentage"]),
-        toStr(r["project_manager_name"]), toStr(r["project_manager_contact"]),
-        toStr(r["spoc_name"]), toStr(r["spoc_contact"]),
-        toStr(r["usp"]), toStr(r["teaser"]), toStr(r["details"]),
-        toStr(r["status"]) ?? "ACTIVE", toStr(r["lead_registration_status"]),
-        callerUid, callerUid,
-      ]
+      [newUniqueId, ...params, callerUid]
     );
     const projectId = ins.rows[0].id;
     for (const cfg of configurations) {
@@ -3291,7 +3289,7 @@ app.post("/chat/tts", async (req, res) => {
 
     if (!ttsRes.ok) {
       const errText = await ttsRes.text();
-      console.error("Google TTS error:", errText);
+      console.error("Google TTS error:", errText.slice(0, 200));
       res.status(502).json({ error: "TTS generation failed" });
       return;
     }
