@@ -30,7 +30,6 @@ import {
   ChatMessage,
 } from "../lib/chatAgent";
 import { query, queryOne, withTransaction } from "../lib/db";
-import { upsertProjectRow } from "../lib/sheetsBackup";
 import type { CreateProjectInput, UpdateProjectInput } from "../types/project";
 
 const ALLOWED_ORIGINS = [
@@ -63,6 +62,8 @@ app.use(express.json({ limit: "10mb" })); // 10mb to handle base64 attendance ph
 app.use(cookieParser());
 
 // ── Helpers ───────────────────────────────────────────────────────────
+
+const UNIQUE_ID_RE = /^PROP-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const isPermissionDeniedError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
@@ -1311,7 +1312,6 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
 
     // Use client-supplied uniqueId if valid (allows pre-scoped storage uploads);
     // otherwise generate a new one server-side.
-    const UNIQUE_ID_RE = /^PROP-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const uniqueId =
       body.uniqueId && UNIQUE_ID_RE.test(body.uniqueId)
         ? body.uniqueId
@@ -1388,11 +1388,6 @@ app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "
 
       return insertResult.rows[0];
     });
-
-    const fullProject = await fetchProjectById(project.id);
-
-    // Await backup so Cloud Functions doesn't freeze the process before it completes
-    if (fullProject) await upsertProjectRow(fullProject);
 
     res.status(201).json({ id: project.id, uniqueId, success: true, pending: pendingRoles.has(callerRole ?? "") });
   } catch (error) {
@@ -1536,7 +1531,6 @@ app.patch("/admin/properties/:id", requireAuth, requireRole("super_admin", "admi
     await applyProjectUpdate(projectId, body, callerUid);
 
     const updated = await fetchProjectById(projectId);
-    if (updated) await upsertProjectRow(updated);
 
     res.json({ success: true, project: updated });
   } catch (error) {
@@ -1620,13 +1614,351 @@ app.post("/admin/properties/:id/reject", requireAuth, requireRole("super_admin")
   }
 });
 
-// Super admin: get Google Sheets backup link
-app.get("/admin/settings/backup-sheet", requireAuth, requireRole("super_admin"), async (_req, res) => {
-  const sheetId = process.env.BACKUP_SHEET_ID;
-  if (!sheetId) {
-    return res.status(503).json({ error: "Backup sheet not configured" });
+// ── CSV helpers ──────────────────────────────────────────────────────────────
+const CSV_HEADERS = [
+  "unique_id", "name", "developer_name", "rera_number", "property_type",
+  "project_type", "project_segment", "possession_status", "possession_date",
+  "address", "zone", "location", "area", "city", "state", "pincode",
+  "landmark", "map_link", "land_parcel", "number_of_towers", "total_units",
+  "available_units", "density", "sft_costing_per_sqft", "emi_starts_from",
+  "pricing_two_bhk", "pricing_three_bhk", "pricing_four_bhk",
+  "video_link_3d", "brochure_link", "onboarding_agreement_link",
+  "agreement_percentage", "project_manager_name", "project_manager_contact",
+  "spoc_name", "spoc_contact", "usp", "teaser", "details",
+  "status", "lead_registration_status",
+  "configurations", "photos", "amenities",
+];
+
+function csvEscape(value: string | number | boolean | null | undefined): string {
+  if (value == null) return "";
+  const s = String(value);
+  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+    return '"' + s.replaceAll('"', '""') + '"';
   }
-  res.json({ sheetUrl: `https://docs.google.com/spreadsheets/d/${sheetId}/edit` });
+  return s;
+}
+
+function projectToCsvRow(p: any): string {
+  const configs = (p.configurations ?? [])
+    .map((c: any) => `${c.bhkCount}:${c.minSft}-${c.maxSft}sft:${c.unitCount}u`)
+    .join("|");
+  const photos = (p.photos ?? []).join("|");
+  const amenities = (p.amenities ?? []).join("|");
+
+  const values = [
+    p.uniqueId, p.name, p.developerName, p.reraNumber, p.propertyType,
+    p.projectType, p.projectSegment, p.possessionStatus, p.possessionDate,
+    p.address, p.zone, p.location, p.area, p.city, p.state, p.pincode,
+    p.landmark, p.mapLink, p.landParcel, p.numberOfTowers, p.totalUnits,
+    p.availableUnits, p.density, p.sftCostingPerSqft, p.emiStartsFrom,
+    p.pricing?.twoBhk, p.pricing?.threeBhk, p.pricing?.fourBhk,
+    p.videoLink3D, p.brochureLink, p.onboardingAgreementLink,
+    p.agreementPercentage,
+    p.projectManager?.name, p.projectManager?.contact,
+    p.spoc?.name, p.spoc?.contact,
+    p.usp, p.teaser, p.details,
+    p.status, p.leadRegistrationStatus,
+    configs, photos, amenities,
+  ];
+  return values.map(csvEscape).join(",");
+}
+
+/** Parse a single RFC-4180 CSV row into an array of field strings. */
+/** Read a quoted CSV field starting just after the opening quote; returns [field, newIndex]. */
+function parseQuotedCsvField(line: string, start: number): [string, number] {
+  let field = "";
+  let i = start;
+  while (i < line.length) {
+    if (line[i] === '"' && line[i + 1] === '"') { field += '"'; i += 2; }
+    else if (line[i] === '"') { i++; break; }
+    else { field += line[i++]; }
+  }
+  return [field, i];
+}
+
+function parseCsvRow(line: string): string[] {
+  const fields: string[] = [];
+  let i = 0;
+  while (i < line.length) {
+    if (line[i] === '"') {
+      const [field, next] = parseQuotedCsvField(line, i + 1);
+      fields.push(field);
+      i = next + (line[next] === "," ? 1 : 0);
+    } else {
+      const end = line.indexOf(",", i);
+      if (end === -1) { fields.push(line.slice(i)); break; }
+      fields.push(line.slice(i, end));
+      i = end + 1;
+    }
+  }
+  return fields;
+}
+
+/** Parse a simple RFC-4180 CSV string into an array of row objects. */
+function parseCsv(text: string): Record<string, string>[] {
+  const lines = text.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n");
+  if (lines.length < 2) return [];
+  const headers = parseCsvRow(lines[0]);
+  return lines
+    .slice(1)
+    .filter((l) => l.trim() !== "")
+    .map((l) => {
+      const vals = parseCsvRow(l);
+      const obj: Record<string, string> = {};
+      headers.forEach((h, idx) => { obj[h] = vals[idx] ?? ""; });
+      return obj;
+    });
+}
+
+// Super admin: export all projects as CSV
+app.get("/admin/projects/export", requireAuth, requireRole("super_admin"), async (_req, res) => {
+  try {
+    const sql = `
+      SELECT
+        p.*,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object(
+            'id', c.id, 'bhk_count', c.bhk_count,
+            'min_sft', c.min_sft, 'max_sft', c.max_sft, 'unit_count', c.unit_count
+          )) FILTER (WHERE c.id IS NOT NULL), '[]'
+        ) AS configurations,
+        COALESCE(
+          json_agg(jsonb_build_object(
+            'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
+          ) ORDER BY ph.display_order) FILTER (WHERE ph.id IS NOT NULL), '[]'
+        ) AS photos,
+        COALESCE(
+          json_agg(DISTINCT jsonb_build_object('id', pa.id, 'amenity', pa.amenity))
+          FILTER (WHERE pa.id IS NOT NULL), '[]'
+        ) AS amenities
+      FROM projects p
+      LEFT JOIN configurations c ON c.project_id = p.id
+      LEFT JOIN project_photos ph ON ph.project_id = p.id
+      LEFT JOIN project_amenities pa ON pa.project_id = p.id
+      WHERE p.status != 'INACTIVE'
+      GROUP BY p.id
+      ORDER BY p.created_at DESC
+    `;
+    const rows: any[] = await query(sql, []);
+    const projects = rows.map((row) =>
+      mapProjectRow({
+        ...row,
+        configurations: row.configurations ?? [],
+        photos: row.photos ?? [],
+        amenities: row.amenities ?? [],
+      })
+    );
+
+    const csv = [CSV_HEADERS.join(","), ...projects.map(projectToCsvRow)].join("\n");
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename="projects-export-${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.send(csv);
+  } catch (error) {
+    console.error("Error exporting projects:", error);
+    res.status(500).json({ error: "Failed to export projects" });
+  }
+});
+
+type CsvConfig = { bhkCount: number; minSft: number; maxSft: number; unitCount: number };
+
+const CONFIG_RE = /^(\d+):(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)sft:(\d+)u$/;
+
+function parseConfigurations(raw: string): CsvConfig[] {
+  return raw
+    .split("|")
+    .filter((s) => s.trim())
+    .map((seg) => {
+      const m = CONFIG_RE.exec(seg);
+      if (!m) return null;
+      return { bhkCount: Number(m[1]), minSft: Number(m[2]), maxSft: Number(m[3]), unitCount: Number(m[4]) };
+    })
+    .filter((x): x is CsvConfig => x !== null);
+}
+
+function validateImportRowFields(r: Record<string, string>): string | null {
+  if (!r["name"]?.trim()) return "name is required";
+  if (!r["city"]?.trim()) return "city is required";
+  if (!r["property_type"]?.trim()) return "property_type is required";
+  return null;
+}
+
+type CsvRowHelpers = {
+  toNum: (v: string) => number | null;
+  toStr: (v: string) => string | null;
+  callerUid: string;
+};
+
+/** Builds the shared 40-field project values array used by both INSERT and UPDATE. */
+function buildProjectParams(
+  r: Record<string, string>,
+  name: string,
+  city: string,
+  propertyType: string,
+  callerUid: string,
+  helpers: CsvRowHelpers
+): (string | number | null)[] {
+  const { toNum, toStr } = helpers;
+  return [
+    name, toStr(r["developer_name"]) ?? "", toStr(r["rera_number"]),
+    propertyType, toStr(r["project_type"]), toStr(r["project_segment"]),
+    toStr(r["possession_status"]), toStr(r["possession_date"]), toStr(r["address"]),
+    toStr(r["zone"]), toStr(r["location"]), toStr(r["area"]), city,
+    toStr(r["state"]), toStr(r["pincode"]), toStr(r["landmark"]),
+    toStr(r["map_link"]), toNum(r["land_parcel"]), toNum(r["number_of_towers"]),
+    toNum(r["total_units"]), toNum(r["available_units"]), toStr(r["density"]),
+    toNum(r["sft_costing_per_sqft"]), toStr(r["emi_starts_from"]),
+    toNum(r["pricing_two_bhk"]), toNum(r["pricing_three_bhk"]), toNum(r["pricing_four_bhk"]),
+    toStr(r["video_link_3d"]), toStr(r["brochure_link"]), toStr(r["onboarding_agreement_link"]),
+    toNum(r["agreement_percentage"]),
+    toStr(r["project_manager_name"]), toStr(r["project_manager_contact"]),
+    toStr(r["spoc_name"]), toStr(r["spoc_contact"]),
+    toStr(r["usp"]), toStr(r["teaser"]), toStr(r["details"]),
+    toStr(r["status"]) ?? "ACTIVE", toStr(r["lead_registration_status"]),
+    callerUid,
+  ];
+}
+
+/** (Re)inserts configurations, photos and amenities for a project, replacing any existing rows. */
+async function replaceProjectRelations(
+  client: { query: (sql: string, params?: any[]) => Promise<any> },
+  projectId: string,
+  configurations: CsvConfig[],
+  photos: string[],
+  amenities: string[]
+): Promise<void> {
+  await client.query("DELETE FROM configurations WHERE project_id=$1", [projectId]);
+  for (const cfg of configurations) {
+    await client.query(
+      `INSERT INTO configurations (project_id,bhk_count,min_sft,max_sft,unit_count) VALUES ($1,$2,$3,$4,$5)`,
+      [projectId, cfg.bhkCount, cfg.minSft, cfg.maxSft, cfg.unitCount]
+    );
+  }
+  await client.query("DELETE FROM project_photos WHERE project_id=$1", [projectId]);
+  for (let pi = 0; pi < photos.length; pi++) {
+    await client.query(
+      `INSERT INTO project_photos (project_id,url,display_order) VALUES ($1,$2,$3)`,
+      [projectId, photos[pi], pi]
+    );
+  }
+  await client.query("DELETE FROM project_amenities WHERE project_id=$1", [projectId]);
+  for (const amenity of amenities) {
+    await client.query(
+      `INSERT INTO project_amenities (project_id,amenity) VALUES ($1,$2)`,
+      [projectId, amenity]
+    );
+  }
+}
+
+async function upsertProjectFromCsvRow(
+  r: Record<string, string>,
+  helpers: CsvRowHelpers
+): Promise<{ uniqueId: string; action: "created" | "updated"; id: string }> {
+  const { callerUid } = helpers;
+  const uniqueId = r["unique_id"]?.trim() ?? "";
+  const name = r["name"].trim();
+  const city = r["city"].trim();
+  const propertyType = r["property_type"].trim();
+  const configurations = parseConfigurations(r["configurations"] ?? "");
+  const photos = (r["photos"] ?? "").split("|").map((s) => s.trim()).filter(Boolean);
+  const amenities = (r["amenities"] ?? "").split("|").map((s) => s.trim()).filter(Boolean);
+
+  const existing: any = uniqueId
+    ? await queryOne("SELECT id FROM projects WHERE unique_id = $1", [uniqueId])
+    : null;
+
+  if (existing) {
+    await withTransaction(async (client) => {
+      const params = buildProjectParams(r, name, city, propertyType, callerUid, helpers);
+      await client.query(
+        `UPDATE projects SET
+          name=$1, developer_name=$2, rera_number=$3, property_type=$4, project_type=$5,
+          project_segment=$6, possession_status=$7, possession_date=$8, address=$9, zone=$10,
+          location=$11, area=$12, city=$13, state=$14, pincode=$15, landmark=$16,
+          map_link=$17, land_parcel=$18, number_of_towers=$19, total_units=$20,
+          available_units=$21, density=$22, sft_costing_per_sqft=$23, emi_starts_from=$24,
+          pricing_two_bhk=$25, pricing_three_bhk=$26, pricing_four_bhk=$27,
+          video_link_3d=$28, brochure_link=$29, onboarding_agreement_link=$30,
+          agreement_percentage=$31, project_manager_name=$32, project_manager_contact=$33,
+          spoc_name=$34, spoc_contact=$35, usp=$36, teaser=$37, details=$38,
+          status=$39, lead_registration_status=$40, updated_by=$41, updated_at=now()
+        WHERE id=$42`,
+        [...params, existing.id]
+      );
+      await replaceProjectRelations(client, existing.id, configurations, photos, amenities);
+    });
+    return { uniqueId, action: "updated", id: existing.id };
+  }
+
+  const newUniqueId = uniqueId && UNIQUE_ID_RE.test(uniqueId) ? uniqueId : `PROP-${randomUUID()}`;
+  const inserted = await withTransaction(async (client) => {
+    const params = buildProjectParams(r, name, city, propertyType, callerUid, helpers);
+    const ins = await client.query(
+      `INSERT INTO projects (
+        unique_id,name,developer_name,rera_number,property_type,project_type,
+        project_segment,possession_status,possession_date,address,zone,location,
+        area,city,state,pincode,landmark,map_link,land_parcel,number_of_towers,
+        total_units,available_units,density,sft_costing_per_sqft,emi_starts_from,
+        pricing_two_bhk,pricing_three_bhk,pricing_four_bhk,video_link_3d,brochure_link,
+        onboarding_agreement_link,agreement_percentage,project_manager_name,project_manager_contact,
+        spoc_name,spoc_contact,usp,teaser,details,status,lead_registration_status,
+        created_by,updated_by,created_at,updated_at
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
+        $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,now(),now()
+      ) RETURNING id`,
+      [newUniqueId, ...params, callerUid]
+    );
+    const projectId = ins.rows[0].id;
+    await replaceProjectRelations(client, projectId, configurations, photos, amenities);
+    return ins.rows[0];
+  });
+  return { uniqueId: newUniqueId, action: "created", id: inserted.id };
+}
+
+// Super admin: import projects from CSV (upsert by unique_id)
+app.post("/admin/projects/import", requireAuth, requireRole("super_admin"), express.text({ type: "text/csv", limit: "10mb" }), async (req, res) => {
+  try {
+    const csvText: string = req.body;
+    if (!csvText || typeof csvText !== "string") {
+      return res.status(400).json({ error: "Request body must be CSV text with Content-Type: text/csv" });
+    }
+
+    const rows = parseCsv(csvText);
+    if (!rows.length) return res.status(400).json({ error: "CSV is empty or has no data rows" });
+
+    const callerUid = req.user?.uid ?? "";
+    const results: Array<{ uniqueId: string; action: "created" | "updated"; id: string }> = [];
+    const errors: Array<{ row: number; uniqueId?: string; error: string }> = [];
+    const toNum = (v: string) => v.trim() === "" ? null : Number(v);
+    const toStr = (v: string) => v.trim() === "" ? null : v.trim();
+    const helpers: CsvRowHelpers = { toNum, toStr, callerUid };
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const validationError = validateImportRowFields(r);
+      if (validationError) {
+        errors.push({ row: i + 2, uniqueId: r["unique_id"]?.trim(), error: validationError });
+        continue;
+      }
+      try {
+        const result = await upsertProjectFromCsvRow(r, helpers);
+        results.push(result);
+      } catch (rowErr) {
+        errors.push({ row: i + 2, uniqueId: r["unique_id"]?.trim(), error: String((rowErr as Error).message) });
+      }
+    }
+
+    res.json({
+      success: true,
+      imported: results.filter((r) => r.action === "created").length,
+      updated: results.filter((r) => r.action === "updated").length,
+      errors,
+      results,
+    });
+  } catch (error) {
+    console.error("Error importing projects:", error);
+    res.status(500).json({ error: "Failed to import projects" });
+  }
 });
 
 app.post("/admin/enquiries/:id/assign", ...requireAdmin, async (req, res) => {
@@ -2950,8 +3282,8 @@ app.post("/chat/tts", async (req, res) => {
     });
 
     if (!ttsRes.ok) {
-      const errText = await ttsRes.text();
-      console.error("Google TTS error:", errText);
+      await ttsRes.text();
+      console.error("Google TTS request failed with status", ttsRes.status);
       res.status(502).json({ error: "TTS generation failed" });
       return;
     }
