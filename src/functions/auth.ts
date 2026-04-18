@@ -9,7 +9,7 @@ export type AppRole =
   | "admin"
   | "howzer_sourcing"
   | "howzer_sales"
-  | "partner"
+  | "howzer_employee"
   | "client";
 
 const VALID_ROLES: AppRole[] = [
@@ -17,7 +17,7 @@ const VALID_ROLES: AppRole[] = [
   "admin",
   "howzer_sourcing",
   "howzer_sales",
-  "partner",
+  "howzer_employee",
   "client",
 ];
 

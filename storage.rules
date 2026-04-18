@@ -9,7 +9,7 @@ service firebase.storage {
       allow write: if request.auth != null
         && request.auth.token.email == userEmail
         && (request.auth.token.role == 'agent'
-            || request.auth.token.role == 'partner'
+            || request.auth.token.role == 'howzer_employee'
             || request.auth.token.role == 'admin'
             || request.auth.token.role == 'super_admin');
 
@@ -27,7 +27,7 @@ service firebase.storage {
       allow write: if request.auth != null
         && (request.auth.token.role == 'admin'
             || request.auth.token.role == 'super_admin'
-            || request.auth.token.role == 'partner');
+            || request.auth.token.role == 'howzer_employee');
     }
 
     // ── Project Media ────────────────────────────────────────────────
@@ -54,9 +54,9 @@ service firebase.storage {
       allow read: if request.auth != null
         && (request.auth.token.role == 'admin'
             || request.auth.token.role == 'super_admin'
-            || request.auth.token.role == 'partner');
+            || request.auth.token.role == 'howzer_employee');
       allow write: if request.auth != null
-        && (request.auth.token.role == 'partner'
+        && (request.auth.token.role == 'howzer_employee'
             || request.auth.token.role == 'admin'
             || request.auth.token.role == 'super_admin');
     }
