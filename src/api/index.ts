@@ -2937,14 +2937,14 @@ app.get("/resale", async (req, res) => {
 // NOTE: must be registered BEFORE /resale/:id to avoid route collision
 app.get("/resale/mine", requireAuth, async (req, res) => {
   try {
-    const userEmail = (req.user?.email ?? req.user?.phone)?.toLowerCase();
-    if (!userEmail) {
-      res.status(400).json({ error: "User email not found in token" });
+    const uid = req.user?.uid;
+    if (!uid) {
+      res.status(400).json({ error: "User UID not found in token" });
       return;
     }
 
     const snapshot = await collections.resaleProperties
-      .where("submittedBy", "==", userEmail)
+      .where("submittedByUid", "==", uid)
       .orderBy("created_at", "desc")
       .get();
 
