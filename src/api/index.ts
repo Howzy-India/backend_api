@@ -772,6 +772,60 @@ app.post("/submissions", async (req, res) => {
   }
 });
 
+async function registerHowzerEmployee(
+  submission: { name: string; email: string },
+  details: Record<string, any>,
+  generatedPartnerId: string
+): Promise<void> {
+  const mobileNumber = details.mobileNumber as string | undefined;
+  const parsedPhone = mobileNumber ? parsePhone(mobileNumber) : null;
+
+  if (parsedPhone) {
+    const { normalizedPhone, pendingId } = parsedPhone;
+    await collections.users.doc(pendingId).set(
+      {
+        name: submission.name,
+        displayName: submission.name,
+        phone: normalizedPhone,
+        email: submission.email,
+        role: "howzer_employee",
+        partnerId: generatedPartnerId,
+        location: details.city ?? details.location ?? "",
+        expertise: details.expertise ?? "Residential",
+        status: "active",
+        createdAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    try {
+      const existingUser = await auth.getUserByPhoneNumber(normalizedPhone);
+      await collections.users.doc(existingUser.uid).set(
+        { role: "howzer_employee", partnerId: generatedPartnerId, updatedAt: FieldValue.serverTimestamp() },
+        { merge: true }
+      );
+      await auth.setCustomUserClaims(existingUser.uid, { role: "howzer_employee" });
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code;
+      if (code !== "auth/user-not-found") {
+        console.warn("Unexpected error updating existing Auth user:", code);
+      }
+    }
+  } else {
+    await collections.users.doc(submission.email).set(
+      {
+        name: submission.name,
+        email: submission.email,
+        role: "howzer_employee",
+        partnerId: generatedPartnerId,
+        location: details.city ?? details.location ?? "",
+        expertise: details.expertise ?? "Residential",
+        created_at: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+}
+
 app.patch("/submissions/:id/status", ...requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -797,58 +851,7 @@ app.patch("/submissions/:id/status", ...requireAdmin, async (req, res) => {
       const sequenceNumber = randomInt(1000, 10000);
       generatedPartnerId = `HZ-${cityCode}-PTN-${sequenceNumber}`;
       details.partnerId = generatedPartnerId;
-
-      // Register partner by phone number so they can log in via OTP
-      const mobileNumber = details.mobileNumber as string | undefined;
-      const parsedPhone = mobileNumber ? parsePhone(mobileNumber) : null;
-
-      if (parsedPhone) {
-        const { normalizedPhone, pendingId } = parsedPhone;
-        // Create phone-keyed pending user doc (bootstrapped on first OTP login)
-        await collections.users.doc(pendingId).set(
-          {
-            name: submission.name,
-            displayName: submission.name,
-            phone: normalizedPhone,
-            email: submission.email,
-            role: "howzer_employee",
-            partnerId: generatedPartnerId,
-            location: details.city ?? details.location ?? "",
-            expertise: details.expertise ?? "Residential",
-            status: "active",
-            createdAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
-        // If this phone already has a Firebase Auth user, assign howzer_employee role immediately
-        try {
-          const existingUser = await auth.getUserByPhoneNumber(normalizedPhone);
-          await collections.users.doc(existingUser.uid).set(
-            { role: "howzer_employee", partnerId: generatedPartnerId, updatedAt: FieldValue.serverTimestamp() },
-            { merge: true }
-          );
-          await auth.setCustomUserClaims(existingUser.uid, { role: "howzer_employee" });
-        } catch (err: unknown) {
-          const code = (err as { code?: string })?.code;
-          if (code !== "auth/user-not-found") {
-            console.warn("Unexpected error updating existing Auth user for partner:", code);
-          }
-        }
-      } else {
-        // Fallback: no mobile number, use email-keyed doc (existing behaviour)
-        await collections.users.doc(submission.email).set(
-          {
-            name: submission.name,
-            email: submission.email,
-            role: "howzer_employee",
-            partnerId: generatedPartnerId,
-            location: details.city ?? details.location ?? "",
-            expertise: details.expertise ?? "Residential",
-            created_at: FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
-      }
+      await registerHowzerEmployee(submission, details, generatedPartnerId);
     }
 
     await docRef.update({
