@@ -24,7 +24,7 @@ service cloud.firestore {
     }
 
     function isHowzerEmployee() {
-      return isSignedIn() && role() == 'howzer_employee';
+      return isSignedIn() && (role() == 'howzer_employee' || role() == 'partner');
     }
 
     function isClient() {
