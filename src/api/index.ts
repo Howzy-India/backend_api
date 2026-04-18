@@ -1187,7 +1187,7 @@ app.delete("/admin/employees/:uid", requireAuth, requireRole("super_admin"), asy
 
 // ── Admin: Create User With Any Role ─────────────────────────────────
 
-const MANAGEABLE_ROLES = ["admin", "agent", "partner", "client", "howzer_sourcing", "howzer_sales"] as const;
+const MANAGEABLE_ROLES = ["admin", "partner", "client", "howzer_sourcing", "howzer_sales"] as const;
 type ManageableRole = (typeof MANAGEABLE_ROLES)[number];
 const isManageableRole = (v: unknown): v is ManageableRole =>
   MANAGEABLE_ROLES.includes(v as ManageableRole);
@@ -2304,18 +2304,6 @@ const fetchAssignedEnquiries = async (
       );
     });
 };
-
-app.get("/pilot/assigned-enquiries", requireAuth, requireRole("sales", "admin", "super_admin"), async (_req, res) => {
-  try {
-    const enquiries = await fetchAssignedEnquiries((e) =>
-      Boolean(e.assigned_sales_id)
-    );
-    res.json({ enquiries });
-  } catch (error) {
-    console.error("Error fetching assigned enquiries:", error);
-    res.status(500).json({ error: "Failed to fetch assigned enquiries" });
-  }
-});
 
 app.get("/partner/assigned-enquiries", requireAuth, requireRole("partner", "admin", "super_admin", "howzer_sourcing", "howzer_sales"), async (_req, res) => {
   try {
