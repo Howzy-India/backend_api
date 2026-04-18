@@ -788,8 +788,9 @@ app.patch("/submissions/:id/status", ...requireAdmin, async (req, res) => {
     );
     const details: Record<string, any> = { ...submission.details, remarks };
     let generatedPartnerId: string | null = null;
+    const isHowzerEmployeeSubmission = submission.type === "Partner" || submission.type === "HowzerEmployee";
 
-    if ((submission.type === "Partner" || submission.type === "HowzerEmployee") && status === "Approved") {
+    if (isHowzerEmployeeSubmission && status === "Approved") {
       const cityCode = details.city
         ? String(details.city).substring(0, 3).toUpperCase()
         : "GEN";
