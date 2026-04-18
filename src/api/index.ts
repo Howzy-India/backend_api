@@ -615,7 +615,7 @@ app.post("/leads", async (req, res) => {
 app.post("/leads/auto-assign", ...requireAdmin, async (_req, res) => {
   try {
     const partnersSnapshot = await collections.users
-      .where("role", "==", "howzer_employee")
+      .where("role", "in", ["howzer_employee", "partner"])
       .get();
     if (partnersSnapshot.empty) {
       res
@@ -1038,10 +1038,13 @@ app.get("/admin/sales-team", ...requireAdmin, async (_req, res) => {
 
 app.get("/admin/partners", ...requireAdmin, async (_req, res) => {
   try {
-    const snapshot = await collections.users
-      .where("role", "==", "howzer_employee")
-      .get();
-    const partners = snapshot.docs.map((doc) => {
+    // Query both old 'partner' and new 'howzer_employee' roles for backward compat
+    const [newSnap, oldSnap] = await Promise.all([
+      collections.users.where("role", "==", "howzer_employee").get(),
+      collections.users.where("role", "==", "partner").get(),
+    ]);
+    const allDocs = [...newSnap.docs, ...oldSnap.docs];
+    const partners = allDocs.map((doc) => {
       const data = doc.data();
       const isPending = doc.id.startsWith("pending_");
       return {
@@ -1069,7 +1072,7 @@ app.patch("/admin/partners/:uid", requireAuth, requireRole("super_admin"), async
   try {
     const { uid } = req.params;
     const snap = await collections.users.doc(uid).get();
-    if (!snap.exists || snap.data()?.role !== "howzer_employee") {
+    if (!snap.exists || !(["howzer_employee", "partner"] as string[]).includes(snap.data()?.role)) {
       res.status(404).json({ error: "Partner not found" });
       return;
     }
@@ -1105,7 +1108,7 @@ app.delete("/admin/partners/:uid", requireAuth, requireRole("super_admin"), asyn
   try {
     const { uid } = req.params;
     const snap = await collections.users.doc(uid).get();
-    if (!snap.exists || snap.data()?.role !== "howzer_employee") {
+    if (!snap.exists || !(["howzer_employee", "partner"] as string[]).includes(snap.data()?.role)) {
       res.status(404).json({ error: "Partner not found" });
       return;
     }
