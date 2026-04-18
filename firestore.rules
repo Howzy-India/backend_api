@@ -23,8 +23,8 @@ service cloud.firestore {
       return isSignedIn() && role() == 'agent';
     }
 
-    function isPartner() {
-      return isSignedIn() && role() == 'partner';
+    function isHowzerEmployee() {
+      return isSignedIn() && role() == 'howzer_employee';
     }
 
     function isClient() {
@@ -73,11 +73,11 @@ service cloud.firestore {
     // ── Submissions ──────────────────────────────────────────────────
     match /submissions/{submissionId} {
       allow read: if isAdmin()
-        || (isPartner() && resource.data.email == request.auth.token.email)
+        || (isHowzerEmployee() && resource.data.email == request.auth.token.email)
         || (isClient() && resource.data.email == request.auth.token.email);
       allow create: if isSignedIn();
       allow update: if isAdmin()
-        || (isPartner() && resource.data.email == request.auth.token.email
+        || (isHowzerEmployee() && resource.data.email == request.auth.token.email
             && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['details', 'updated_at']));
       allow delete: if isSuperAdmin();
@@ -87,11 +87,11 @@ service cloud.firestore {
     match /enquiries/{enquiryId} {
       allow read: if isAdmin()
         || (isAgent() && resource.data.assigned_sales_id != null)
-        || (isPartner() && resource.data.assigned_partner_id != null)
+        || (isHowzerEmployee() && resource.data.assigned_partner_id != null)
         || (isClient() && resource.data.email == request.auth.token.email);
       allow create: if true; // Clients can create without auth
       allow update: if isAdmin()
-        || (isPartner() && resource.data.assigned_partner_id != null
+        || (isHowzerEmployee() && resource.data.assigned_partner_id != null
             && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['status', 'updated_at']));
       allow delete: if isSuperAdmin();
@@ -99,7 +99,7 @@ service cloud.firestore {
 
     // ── Enquiry Timeline ─────────────────────────────────────────────
     match /enquiry_timeline/{entryId} {
-      allow read: if isAdmin() || isAgent() || isPartner()
+      allow read: if isAdmin() || isAgent() || isHowzerEmployee()
         || (isClient() && resource.data.created_by == request.auth.token.email);
       allow create: if isSignedIn();
       allow update, delete: if isSuperAdmin();
@@ -116,7 +116,7 @@ service cloud.firestore {
     // ── Builders ─────────────────────────────────────────────────────
     match /builders/{builderId} {
       allow read: if isAdmin();
-      allow create: if isAdmin() || isPartner();
+      allow create: if isAdmin() || isHowzerEmployee();
       allow update: if isAdmin();
       allow delete: if isSuperAdmin();
     }
@@ -150,11 +150,11 @@ service cloud.firestore {
       allow read: if isAdmin()
         || (isSignedIn() && resource.data.userEmail == request.auth.token.email);
       allow create: if isSignedIn()
-        && (isAgent() || isPartner() || isAdmin())
+        && (isAgent() || isHowzerEmployee() || isAdmin())
         && request.resource.data.userEmail == request.auth.token.email;
       allow update: if isAdmin()
         || (isSignedIn() && resource.data.userEmail == request.auth.token.email
-            && (isAgent() || isPartner()));
+            && (isAgent() || isHowzerEmployee()));
       allow delete: if isSuperAdmin();
     }
 
@@ -163,7 +163,7 @@ service cloud.firestore {
       allow read: if isAdmin()
         || (isSignedIn() && resource.data.userEmail == request.auth.token.email);
       allow create: if isSignedIn()
-        && (isAgent() || isPartner() || isAdmin())
+        && (isAgent() || isHowzerEmployee() || isAdmin())
         && request.resource.data.userEmail == request.auth.token.email;
       allow update, delete: if isSuperAdmin();
     }

@@ -615,7 +615,7 @@ app.post("/leads", async (req, res) => {
 app.post("/leads/auto-assign", ...requireAdmin, async (_req, res) => {
   try {
     const partnersSnapshot = await collections.users
-      .where("role", "==", "partner")
+      .where("role", "==", "howzer_employee")
       .get();
     if (partnersSnapshot.empty) {
       res
@@ -789,7 +789,7 @@ app.patch("/submissions/:id/status", ...requireAdmin, async (req, res) => {
     const details: Record<string, any> = { ...submission.details, remarks };
     let generatedPartnerId: string | null = null;
 
-    if (submission.type === "Partner" && status === "Approved") {
+    if ((submission.type === "Partner" || submission.type === "HowzerEmployee") && status === "Approved") {
       const cityCode = details.city
         ? String(details.city).substring(0, 3).toUpperCase()
         : "GEN";
@@ -810,7 +810,7 @@ app.patch("/submissions/:id/status", ...requireAdmin, async (req, res) => {
             displayName: submission.name,
             phone: normalizedPhone,
             email: submission.email,
-            role: "partner",
+            role: "howzer_employee",
             partnerId: generatedPartnerId,
             location: details.city ?? details.location ?? "",
             expertise: details.expertise ?? "Residential",
@@ -819,14 +819,14 @@ app.patch("/submissions/:id/status", ...requireAdmin, async (req, res) => {
           },
           { merge: true }
         );
-        // If this phone already has a Firebase Auth user, assign partner role immediately
+        // If this phone already has a Firebase Auth user, assign howzer_employee role immediately
         try {
           const existingUser = await auth.getUserByPhoneNumber(normalizedPhone);
           await collections.users.doc(existingUser.uid).set(
-            { role: "partner", partnerId: generatedPartnerId, updatedAt: FieldValue.serverTimestamp() },
+            { role: "howzer_employee", partnerId: generatedPartnerId, updatedAt: FieldValue.serverTimestamp() },
             { merge: true }
           );
-          await auth.setCustomUserClaims(existingUser.uid, { role: "partner" });
+          await auth.setCustomUserClaims(existingUser.uid, { role: "howzer_employee" });
         } catch (err: unknown) {
           const code = (err as { code?: string })?.code;
           if (code !== "auth/user-not-found") {
@@ -839,7 +839,7 @@ app.patch("/submissions/:id/status", ...requireAdmin, async (req, res) => {
           {
             name: submission.name,
             email: submission.email,
-            role: "partner",
+            role: "howzer_employee",
             partnerId: generatedPartnerId,
             location: details.city ?? details.location ?? "",
             expertise: details.expertise ?? "Residential",
@@ -1035,7 +1035,7 @@ app.get("/admin/sales-team", ...requireAdmin, async (_req, res) => {
 app.get("/admin/partners", ...requireAdmin, async (_req, res) => {
   try {
     const snapshot = await collections.users
-      .where("role", "==", "partner")
+      .where("role", "==", "howzer_employee")
       .get();
     const partners = snapshot.docs.map((doc) => {
       const data = doc.data();
@@ -1065,7 +1065,7 @@ app.patch("/admin/partners/:uid", requireAuth, requireRole("super_admin"), async
   try {
     const { uid } = req.params;
     const snap = await collections.users.doc(uid).get();
-    if (!snap.exists || snap.data()?.role !== "partner") {
+    if (!snap.exists || snap.data()?.role !== "howzer_employee") {
       res.status(404).json({ error: "Partner not found" });
       return;
     }
@@ -1101,7 +1101,7 @@ app.delete("/admin/partners/:uid", requireAuth, requireRole("super_admin"), asyn
   try {
     const { uid } = req.params;
     const snap = await collections.users.doc(uid).get();
-    if (!snap.exists || snap.data()?.role !== "partner") {
+    if (!snap.exists || snap.data()?.role !== "howzer_employee") {
       res.status(404).json({ error: "Partner not found" });
       return;
     }
@@ -1292,7 +1292,7 @@ app.delete("/admin/employees/:uid", requireAuth, requireRole("super_admin"), asy
 
 // ── Admin: Create User With Any Role ─────────────────────────────────
 
-const MANAGEABLE_ROLES = ["admin", "partner", "client", "howzer_sourcing", "howzer_sales"] as const;
+const MANAGEABLE_ROLES = ["admin", "howzer_employee", "client", "howzer_sourcing", "howzer_sales"] as const;
 type ManageableRole = (typeof MANAGEABLE_ROLES)[number];
 const isManageableRole = (v: unknown): v is ManageableRole =>
   MANAGEABLE_ROLES.includes(v as ManageableRole);
@@ -2410,7 +2410,7 @@ const fetchAssignedEnquiries = async (
     });
 };
 
-app.get("/partner/assigned-enquiries", requireAuth, requireRole("partner", "admin", "super_admin", "howzer_sourcing", "howzer_sales"), async (_req, res) => {
+app.get("/partner/assigned-enquiries", requireAuth, requireRole("howzer_employee", "admin", "super_admin", "howzer_sourcing", "howzer_sales"), async (_req, res) => {
   try {
     const enquiries = await fetchAssignedEnquiries((e) =>
       Boolean(e.assigned_partner_id)
@@ -2569,7 +2569,7 @@ app.patch("/leads/:id", requireAuth, requireRole("agent", "admin", "super_admin"
 app.get(
   "/partner/submissions",
   requireAuth,
-  requireRole("partner", "admin", "super_admin", "howzer_sourcing", "howzer_sales"),
+  requireRole("howzer_employee", "admin", "super_admin", "howzer_sourcing", "howzer_sales"),
   async (req, res) => {
     try {
       const email = req.user?.email;
@@ -2602,7 +2602,7 @@ app.get(
 app.patch(
   "/partner/enquiries/:id/status",
   requireAuth,
-  requireRole("partner", "admin", "super_admin", "howzer_sourcing", "howzer_sales"),
+  requireRole("howzer_employee", "admin", "super_admin", "howzer_sourcing", "howzer_sales"),
   async (req, res) => {
     try {
       const { id } = req.params;
@@ -2662,7 +2662,7 @@ const uploadAttendancePhoto = async (
 app.post(
   "/attendance/punch-in",
   requireAuth,
-  requireRole("agent", "partner", "admin", "super_admin"),
+  requireRole("agent", "howzer_employee", "admin", "super_admin"),
   async (req, res) => {
     try {
       const { photo, location, userEmail: bodyEmail } = req.body;
@@ -2715,7 +2715,7 @@ app.post(
 app.post(
   "/attendance/punch-out",
   requireAuth,
-  requireRole("agent", "partner", "admin", "super_admin"),
+  requireRole("agent", "howzer_employee", "admin", "super_admin"),
   async (req, res) => {
     try {
       const { photo, location, userEmail: bodyEmail } = req.body;
@@ -2762,7 +2762,7 @@ app.post(
 app.get(
   "/attendance",
   requireAuth,
-  requireRole("agent", "partner", "admin", "super_admin"),
+  requireRole("agent", "howzer_employee", "admin", "super_admin"),
   async (req, res) => {
     try {
       const { email, date } = req.query as Record<string, string>;
@@ -2806,7 +2806,7 @@ app.get(
 app.get(
   "/attendance/history",
   requireAuth,
-  requireRole("agent", "partner", "admin", "super_admin"),
+  requireRole("agent", "howzer_employee", "admin", "super_admin"),
   async (req, res) => {
     try {
       const email = (req.query.email as string) ?? req.user?.email ?? "";
@@ -2843,7 +2843,7 @@ app.get(
 app.post(
   "/attendance/location",
   requireAuth,
-  requireRole("agent", "partner", "admin", "super_admin"),
+  requireRole("agent", "howzer_employee", "admin", "super_admin"),
   async (req, res) => {
     try {
       const { lat, lng, userEmail: bodyEmail } = req.body;
