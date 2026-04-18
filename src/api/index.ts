@@ -2392,7 +2392,7 @@ app.post("/client/logout-track", async (req, res) => {
   }
 });
 
-// ── Pilot / Partner ──────────────────────────────────────────────────
+// ── Partner ──────────────────────────────────────────────────────────
 
 const fetchAssignedEnquiries = async (
   predicate: (enquiry: ReturnType<typeof mapEnquiryDoc>) => boolean
