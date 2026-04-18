@@ -7,19 +7,17 @@ const bootstrapKey = defineSecret("HOWZY_BOOTSTRAP_KEY");
 export type AppRole =
   | "super_admin"
   | "admin"
-  | "sales_agent"
-  | "sourcing_agent"
   | "howzer_sourcing"
   | "howzer_sales"
+  | "partner"
   | "client";
 
 const VALID_ROLES: AppRole[] = [
   "super_admin",
   "admin",
-  "sales_agent",
-  "sourcing_agent",
   "howzer_sourcing",
   "howzer_sales",
+  "partner",
   "client",
 ];
 
