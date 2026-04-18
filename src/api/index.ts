@@ -797,18 +797,57 @@ app.patch("/submissions/:id/status", ...requireAdmin, async (req, res) => {
       generatedPartnerId = `HZ-${cityCode}-PTN-${sequenceNumber}`;
       details.partnerId = generatedPartnerId;
 
-      await collections.users.doc(submission.email).set(
-        {
-          name: submission.name,
-          email: submission.email,
-          role: "partner",
-          partnerId: generatedPartnerId,
-          location: details.city ?? details.location ?? "",
-          expertise: details.expertise ?? "Residential",
-          created_at: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
+      // Register partner by phone number so they can log in via OTP
+      const mobileNumber = details.mobileNumber as string | undefined;
+      const parsedPhone = mobileNumber ? parsePhone(mobileNumber) : null;
+
+      if (parsedPhone) {
+        const { normalizedPhone, pendingId } = parsedPhone;
+        // Create phone-keyed pending user doc (bootstrapped on first OTP login)
+        await collections.users.doc(pendingId).set(
+          {
+            name: submission.name,
+            displayName: submission.name,
+            phone: normalizedPhone,
+            email: submission.email,
+            role: "partner",
+            partnerId: generatedPartnerId,
+            location: details.city ?? details.location ?? "",
+            expertise: details.expertise ?? "Residential",
+            status: "active",
+            createdAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+        // If this phone already has a Firebase Auth user, assign partner role immediately
+        try {
+          const existingUser = await auth.getUserByPhoneNumber(normalizedPhone);
+          await collections.users.doc(existingUser.uid).set(
+            { role: "partner", partnerId: generatedPartnerId, updatedAt: FieldValue.serverTimestamp() },
+            { merge: true }
+          );
+          await auth.setCustomUserClaims(existingUser.uid, { role: "partner" });
+        } catch (err: unknown) {
+          const code = (err as { code?: string })?.code;
+          if (code !== "auth/user-not-found") {
+            console.warn("Unexpected error updating existing Auth user for partner:", code);
+          }
+        }
+      } else {
+        // Fallback: no mobile number, use email-keyed doc (existing behaviour)
+        await collections.users.doc(submission.email).set(
+          {
+            name: submission.name,
+            email: submission.email,
+            role: "partner",
+            partnerId: generatedPartnerId,
+            location: details.city ?? details.location ?? "",
+            expertise: details.expertise ?? "Residential",
+            created_at: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
     }
 
     await docRef.update({
@@ -998,16 +1037,82 @@ app.get("/admin/partners", ...requireAdmin, async (_req, res) => {
     const snapshot = await collections.users
       .where("role", "==", "partner")
       .get();
-    const partners = snapshot.docs.map(mapUserDoc).map((u) => ({
-      id: u.id,
-      name: u.name,
-      location: u.location,
-      expertise: u.expertise,
-    }));
+    const partners = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      const isPending = doc.id.startsWith("pending_");
+      return {
+        uid: doc.id,
+        name: data.displayName ?? data.name ?? "",
+        email: data.email ?? "",
+        phone: data.phone ?? "",
+        partnerId: data.partnerId ?? "",
+        location: data.location ?? "",
+        expertise: data.expertise ?? "Residential",
+        status: isPending ? "pending" : (data.status ?? "active"),
+        createdAt: data.createdAt?.toDate?.()?.toISOString()
+          ?? data.created_at?.toDate?.()?.toISOString()
+          ?? null,
+      };
+    });
     res.json({ partners });
   } catch (error) {
     console.error("Error fetching partners:", error);
     res.status(500).json({ error: "Failed to fetch partners" });
+  }
+});
+
+app.patch("/admin/partners/:uid", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const snap = await collections.users.doc(uid).get();
+    if (!snap.exists || snap.data()?.role !== "partner") {
+      res.status(404).json({ error: "Partner not found" });
+      return;
+    }
+
+    const update: Record<string, unknown> = {
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: req.user?.uid,
+    };
+    const name = nonEmpty(req.body?.name ?? req.body?.displayName);
+    if (name) { update.name = name; update.displayName = name; }
+    if (req.body?.email) update.email = req.body.email;
+    if (["active", "disabled"].includes(req.body?.status)) update.status = req.body.status;
+
+    await collections.users.doc(uid).set(update, { merge: true });
+
+    // If real Firebase Auth user (not pending), sync disabled flag
+    if (!uid.startsWith("pending_") && req.body?.status) {
+      try {
+        await auth.updateUser(uid, { disabled: req.body.status === "disabled" });
+      } catch {
+        // Auth user may not exist yet — ignore
+      }
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error updating partner:", error);
+    res.status(500).json({ error: "Failed to update partner" });
+  }
+});
+
+app.delete("/admin/partners/:uid", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const snap = await collections.users.doc(uid).get();
+    if (!snap.exists || snap.data()?.role !== "partner") {
+      res.status(404).json({ error: "Partner not found" });
+      return;
+    }
+    if (!uid.startsWith("pending_")) {
+      try { await auth.deleteUser(uid); } catch { /* not yet in Auth */ }
+    }
+    await collections.users.doc(uid).delete();
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting partner:", error);
+    res.status(500).json({ error: "Failed to delete partner" });
   }
 });
 
