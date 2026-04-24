@@ -3403,15 +3403,41 @@ const TTS_VOICES: Record<string, { name: string; ssmlGender: string }> = {
 // POST /chat/tts — convert text to speech using Google Cloud TTS Neural2 (no auth required)
 app.post("/chat/tts", async (req, res) => {
   try {
-    const { text, languageCode = "en-IN", voiceName } = req.body as {
-      text?: string; languageCode?: string; voiceName?: string;
+    const {
+      text,
+      ssml,
+      languageCode = "en-IN",
+      voiceName,
+      speakingRate,
+      pitch,
+    } = req.body as {
+      text?: string;
+      ssml?: string;
+      languageCode?: string;
+      voiceName?: string;
+      speakingRate?: number;
+      pitch?: number;
     };
-    if (!text || typeof text !== "string" || !text.trim()) {
-      res.status(400).json({ error: "text is required" });
+    // Accept either plain text or SSML. SSML takes precedence when both are provided.
+    const hasSsml = typeof ssml === "string" && ssml.trim().length > 0;
+    const hasText = typeof text === "string" && text.trim().length > 0;
+    if (!hasSsml && !hasText) {
+      res.status(400).json({ error: "text or ssml is required" });
       return;
     }
     const defaultVoice = TTS_VOICES[languageCode] ?? TTS_VOICES["en-IN"];
     const resolvedVoiceName = voiceName ?? defaultVoice.name;
+
+    // Clamp modulation params to safe ranges (Google TTS accepts 0.25-4.0 and -20..20).
+    const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+    const resolvedRate = typeof speakingRate === "number" && Number.isFinite(speakingRate)
+      ? clamp(speakingRate, 0.5, 2.0)
+      : 1;
+    const resolvedPitch = typeof pitch === "number" && Number.isFinite(pitch)
+      ? clamp(pitch, -10, 10)
+      : 0;
+
+    const input = hasSsml ? { ssml: ssml!.slice(0, 4900) } : { text: text!.slice(0, 4500) };
 
     const credential = (await import("firebase-admin/app")).getApp().options.credential!;
     const { access_token: accessToken } = await credential.getAccessToken();
@@ -3420,9 +3446,9 @@ app.post("/chat/tts", async (req, res) => {
       method: "POST",
       headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        input: { text: text.slice(0, 4500) },
+        input,
         voice: { languageCode, name: resolvedVoiceName, ssmlGender: defaultVoice.ssmlGender },
-        audioConfig: { audioEncoding: "MP3", speakingRate: 1, pitch: 0 },
+        audioConfig: { audioEncoding: "MP3", speakingRate: resolvedRate, pitch: resolvedPitch },
       }),
     });
 
