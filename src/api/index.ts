@@ -1851,6 +1851,71 @@ function parseCsv(text: string): Record<string, string>[] {
     });
 }
 
+// Super admin: download a blank CSV template for bulk project upload.
+// Returns a file with just the header row plus one illustrative example row
+// that Super Admins can fill in and upload via the import endpoint.
+app.get("/admin/projects/template", requireAuth, requireRole("super_admin"), (_req, res) => {
+  const example: Record<string, string> = {
+    unique_id: "",
+    name: "Example Heights",
+    developer_name: "Example Builders",
+    rera_number: "P01234567890",
+    property_type: "PROJECT",
+    project_type: "APARTMENT",
+    project_segment: "PREMIUM",
+    possession_status: "UNDER_CONSTRUCTION",
+    possession_date: "2027-12-01",
+    address: "Plot 12, Sector 9",
+    zone: "WEST",
+    location: "Kondapur",
+    area: "Hyderabad West",
+    city: "Hyderabad",
+    state: "Telangana",
+    pincode: "500084",
+    landmark: "Opposite Metro Station",
+    map_link: "https://maps.google.com/?q=17.45,78.36",
+    land_parcel: "5.2",
+    number_of_towers: "4",
+    total_units: "320",
+    available_units: "180",
+    density: "MEDIUM",
+    sft_costing_per_sqft: "7500",
+    pricing_two_bhk: "9500000",
+    pricing_three_bhk: "14500000",
+    pricing_four_bhk: "21000000",
+    video_link_3d: "https://youtube.com/watch?v=example",
+    brochure_link: "",
+    onboarding_agreement_link: "",
+    agreement_percentage: "",
+    project_manager_name: "Asha Rao",
+    project_manager_contact: "9876543210",
+    project_manager_email: "asha@example.com",
+    spoc_name: "Ravi Kumar",
+    spoc_contact: "9876500000",
+    spoc_email: "ravi@example.com",
+    lead_registration_type: "Email Process",
+    lead_registration_email: "leads@example.com",
+    lead_registration_app_link: "",
+    lead_registration_app_id: "",
+    lead_registration_app_password: "",
+    commission_type: "Percentage",
+    commission_value: "2.5",
+    usp: "Lake-facing towers with smart-home automation",
+    teaser: "Your next landmark address",
+    details: "A premium residential community spread across 5 acres...",
+    status: "ACTIVE",
+    lead_registration_status: "ACTIVE",
+    configurations: "2:1100-1300sft:120u|3:1500-1800sft:160u",
+    photos: "https://example.com/p1.jpg|https://example.com/p2.jpg",
+    amenities: "Swimming Pool|Gym|Clubhouse",
+  };
+  const exampleRow = CSV_HEADERS.map((h) => csvEscape(example[h] ?? "")).join(",");
+  const csv = [CSV_HEADERS.join(","), exampleRow].join("\n");
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename="projects-template.csv"`);
+  res.send(csv);
+});
+
 // Super admin: export all projects as CSV
 app.get("/admin/projects/export", requireAuth, requireRole("super_admin"), async (_req, res) => {
   try {
