@@ -176,5 +176,14 @@ service cloud.firestore {
       allow create: if isAdmin();
       allow update, delete: if isAdmin();
     }
+
+    // ── Project Drafts (autosave) ─────────────────────────────────────
+    // Drafts are written exclusively via the REST API (Admin SDK bypasses
+    // rules). Direct client SDK access is locked down: only super_admin
+    // can read for support/debugging.
+    match /project_drafts/{draftId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
   }
 }
