@@ -1402,6 +1402,141 @@ async function fetchProjectById(id: string) {
   });
 }
 
+// ---- Project drafts (autosave) ---------------------------------------------
+//
+// Drafts let onboarders (super_admin, admin, howzer_sourcing, howzer_sales)
+// save a half-filled CreateProjectModal form and resume later from "My
+// Submissions". The frontend autosaves the form payload (debounced) to
+// PUT /drafts/:id; on successful submission of the real project the modal
+// calls DELETE /drafts/:id.
+//
+// Storage is Firestore (collection `project_drafts`) so we get cheap reads
+// per user without touching Cloud SQL. Each draft is owned by the creating
+// user; super_admin can read any draft for support.
+
+const DRAFT_ROLES = ["super_admin", "admin", "howzer_sourcing", "howzer_sales"] as const;
+
+function sanitizeDraftId(id: string): string | null {
+  // Firestore doc IDs cannot contain "/" and must be 1-1500 bytes. We also
+  // restrict to URL-safe chars to keep things predictable.
+  if (!id || typeof id !== "string") return null;
+  if (id.length === 0 || id.length > 200) return null;
+  if (!/^[A-Za-z0-9_.-]+$/.test(id)) return null;
+  return id;
+}
+
+app.get("/drafts", requireAuth, requireRole(...DRAFT_ROLES), async (req, res) => {
+  try {
+    const uid = req.user!.uid;
+    const isSuperAdmin = req.user?.role === "super_admin";
+    const draftsQuery = isSuperAdmin
+      ? collections.projectDrafts.orderBy("updatedAt", "desc").limit(100)
+      : collections.projectDrafts.where("ownerUid", "==", uid).orderBy("updatedAt", "desc").limit(100);
+    const snap = await draftsQuery.get();
+    const drafts = snap.docs.map((doc) => {
+      const data = doc.data() as any;
+      return {
+        id: doc.id,
+        ownerUid: data.ownerUid,
+        propertyType: data.propertyType ?? null,
+        title: data.title ?? null,
+        updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() ?? null,
+        createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? null,
+      };
+    });
+    return res.json({ drafts });
+  } catch (err: any) {
+    console.error("[drafts] list failed", err);
+    return res.status(500).json({ error: err.message ?? "failed to list drafts" });
+  }
+});
+
+app.get("/drafts/:id", requireAuth, requireRole(...DRAFT_ROLES), async (req, res) => {
+  try {
+    const id = sanitizeDraftId(req.params.id);
+    if (!id) return res.status(400).json({ error: "invalid draft id" });
+    const doc = await collections.projectDrafts.doc(id).get();
+    if (!doc.exists) return res.status(404).json({ error: "draft not found" });
+    const data = doc.data() as any;
+    if (data.ownerUid !== req.user!.uid && req.user?.role !== "super_admin") {
+      return res.status(403).json({ error: "forbidden" });
+    }
+    return res.json({
+      id: doc.id,
+      ownerUid: data.ownerUid,
+      propertyType: data.propertyType ?? null,
+      title: data.title ?? null,
+      form: data.form ?? null,
+      updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() ?? null,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? null,
+    });
+  } catch (err: any) {
+    console.error("[drafts] get failed", err);
+    return res.status(500).json({ error: err.message ?? "failed to load draft" });
+  }
+});
+
+app.put("/drafts/:id", requireAuth, requireRole(...DRAFT_ROLES), async (req, res) => {
+  try {
+    const id = sanitizeDraftId(req.params.id);
+    if (!id) return res.status(400).json({ error: "invalid draft id" });
+    const body = req.body as { propertyType?: string; title?: string; form?: unknown };
+    if (!body || typeof body !== "object") {
+      return res.status(400).json({ error: "body required" });
+    }
+    if (body.form === undefined) {
+      return res.status(400).json({ error: "form is required" });
+    }
+
+    const ref = collections.projectDrafts.doc(id);
+    const existing = await ref.get();
+    if (existing.exists) {
+      const data = existing.data() as any;
+      if (data.ownerUid !== req.user!.uid && req.user?.role !== "super_admin") {
+        return res.status(403).json({ error: "forbidden" });
+      }
+      await ref.update({
+        propertyType: body.propertyType ?? data.propertyType ?? null,
+        title: body.title ?? data.title ?? null,
+        form: body.form,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    } else {
+      await ref.set({
+        ownerUid: req.user!.uid,
+        propertyType: body.propertyType ?? null,
+        title: body.title ?? null,
+        form: body.form,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+    return res.json({ id, ok: true });
+  } catch (err: any) {
+    console.error("[drafts] put failed", err);
+    return res.status(500).json({ error: err.message ?? "failed to save draft" });
+  }
+});
+
+app.delete("/drafts/:id", requireAuth, requireRole(...DRAFT_ROLES), async (req, res) => {
+  try {
+    const id = sanitizeDraftId(req.params.id);
+    if (!id) return res.status(400).json({ error: "invalid draft id" });
+    const ref = collections.projectDrafts.doc(id);
+    const existing = await ref.get();
+    if (!existing.exists) return res.json({ ok: true });
+    const data = existing.data() as any;
+    if (data.ownerUid !== req.user!.uid && req.user?.role !== "super_admin") {
+      return res.status(403).json({ error: "forbidden" });
+    }
+    await ref.delete();
+    return res.json({ ok: true });
+  } catch (err: any) {
+    console.error("[drafts] delete failed", err);
+    return res.status(500).json({ error: err.message ?? "failed to delete draft" });
+  }
+});
+
 app.post("/admin/properties", requireAuth, requireRole("super_admin", "admin", "howzer_sourcing", "howzer_sales"), async (req, res) => {
   try {
     const body = req.body as CreateProjectInput;
