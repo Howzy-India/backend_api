@@ -1535,22 +1535,25 @@ async function replaceConfigurations(
   }
 }
 
-/** Appends new photos for a project within a transaction. */
-async function appendPhotos(
+/** Replaces photos for a project within a transaction.
+ *
+ * Photos must use replace semantics (not append): the frontend always sends
+ * the full, deduped list of photo URLs from the form, so appending would
+ * produce duplicates on every PATCH (the verification panel rendered the
+ * same image twice for that reason).
+ */
+async function replacePhotos(
   client: any,
   projectId: string,
   photos: UpdateProjectInput["photos"]
 ): Promise<void> {
-  const countRes = await client.query(
-    "SELECT COUNT(*) FROM project_photos WHERE project_id = $1",
-    [projectId]
-  );
-  let startOrder = Number(countRes.rows[0].count);
+  await client.query("DELETE FROM project_photos WHERE project_id = $1", [projectId]);
+  let order = 0;
   for (const photo of photos ?? []) {
     const photoUrl = typeof photo === "string" ? photo : (photo as any).url;
     await client.query(
       "INSERT INTO project_photos (project_id, url, display_order) VALUES ($1,$2,$3)",
-      [projectId, photoUrl, startOrder++]
+      [projectId, photoUrl, order++]
     );
   }
 }
@@ -1628,8 +1631,8 @@ async function applyProjectUpdate(
       await replaceConfigurations(client, projectId, body.configurations);
     }
 
-    if (body.photos?.length) {
-      await appendPhotos(client, projectId, body.photos);
+    if (body.photos !== undefined) {
+      await replacePhotos(client, projectId, body.photos);
     }
 
     if (body.amenities !== undefined) {
