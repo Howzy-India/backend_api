@@ -215,5 +215,16 @@ service cloud.firestore {
       allow update: if isAdmin();
       allow delete: if isSuperAdmin();
     }
+
+    // ── NRI Enquiries ─────────────────────────────────────────────────
+    // Submitted by visitors via the public "Explore NRI Services" page
+    // on the About section. Only admins can read and triage; super_admin
+    // can delete.
+    match /nri_enquiries/{enquiryId} {
+      allow read: if isAdmin();
+      allow create: if true; // Public — visitors enquire without signing in
+      allow update: if isAdmin();
+      allow delete: if isSuperAdmin();
+    }
   }
 }
