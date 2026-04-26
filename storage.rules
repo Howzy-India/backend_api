@@ -64,5 +64,16 @@ service firebase.storage {
             || request.auth.token.role == 'admin'
             || request.auth.token.role == 'super_admin');
     }
+
+    // ── Career Resumes ───────────────────────────────────────────────
+    // Path: careers/resumes/{fileName}
+    // Visitors apply publicly so writes are unauthenticated. Reads are
+    // restricted to admins so resumes are not publicly enumerable.
+    match /careers/resumes/{fileName} {
+      allow read: if request.auth != null
+        && (request.auth.token.role == 'admin'
+            || request.auth.token.role == 'super_admin');
+      allow write: if true;
+    }
   }
 }
