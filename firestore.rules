@@ -204,5 +204,16 @@ service cloud.firestore {
       allow update: if isAdmin();
       allow delete: if isSuperAdmin();
     }
+
+    // ── Partner Network Applications ──────────────────────────────────
+    // Submitted by visitors via the public "Join Network" form on the
+    // About section. Only admins can read and triage; super_admin can
+    // delete.
+    match /partner_network_applications/{applicationId} {
+      allow read: if isAdmin();
+      allow create: if true; // Public — visitors apply without signing in
+      allow update: if isAdmin();
+      allow delete: if isSuperAdmin();
+    }
   }
 }
