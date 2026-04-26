@@ -417,9 +417,11 @@ app.get("/projects", optionalAuth, async (req, res) => {
           )) FILTER (WHERE c.id IS NOT NULL), '[]'
         ) AS configurations,
         COALESCE(
-          json_agg(jsonb_build_object(
-            'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
-          ) ORDER BY ph.display_order) FILTER (WHERE ph.id IS NOT NULL), '[]'
+          (SELECT json_agg(jsonb_build_object(
+             'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
+           ) ORDER BY ph.display_order)
+           FROM project_photos ph WHERE ph.project_id = p.id),
+          '[]'::json
         ) AS photos,
         COALESCE(
           json_agg(DISTINCT jsonb_build_object('id', pa.id, 'amenity', pa.amenity))
@@ -427,7 +429,6 @@ app.get("/projects", optionalAuth, async (req, res) => {
         ) AS amenities
       FROM projects p
       LEFT JOIN configurations c ON c.project_id = p.id
-      LEFT JOIN project_photos ph ON ph.project_id = p.id
       LEFT JOIN project_amenities pa ON pa.project_id = p.id
       WHERE ${whereClause}
       GROUP BY p.id
@@ -465,9 +466,11 @@ app.get("/projects/:id", async (req, res) => {
           )) FILTER (WHERE c.id IS NOT NULL), '[]'
         ) AS configurations,
         COALESCE(
-          json_agg(jsonb_build_object(
-            'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
-          ) ORDER BY ph.display_order) FILTER (WHERE ph.id IS NOT NULL), '[]'
+          (SELECT json_agg(jsonb_build_object(
+             'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
+           ) ORDER BY ph.display_order)
+           FROM project_photos ph WHERE ph.project_id = p.id),
+          '[]'::json
         ) AS photos,
         COALESCE(
           json_agg(DISTINCT jsonb_build_object('id', pa.id, 'amenity', pa.amenity))
@@ -475,7 +478,6 @@ app.get("/projects/:id", async (req, res) => {
         ) AS amenities
       FROM projects p
       LEFT JOIN configurations c ON c.project_id = p.id
-      LEFT JOIN project_photos ph ON ph.project_id = p.id
       LEFT JOIN project_amenities pa ON pa.project_id = p.id
       WHERE (p.id::text = $1 OR p.unique_id = $1) AND p.status != 'INACTIVE'
       GROUP BY p.id
@@ -1377,9 +1379,11 @@ async function fetchProjectById(id: string) {
         )) FILTER (WHERE c.id IS NOT NULL), '[]'
       ) AS configurations,
       COALESCE(
-        json_agg(jsonb_build_object(
-          'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
-        ) ORDER BY ph.display_order) FILTER (WHERE ph.id IS NOT NULL), '[]'
+        (SELECT json_agg(jsonb_build_object(
+           'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
+         ) ORDER BY ph.display_order)
+         FROM project_photos ph WHERE ph.project_id = p.id),
+        '[]'::json
       ) AS photos,
       COALESCE(
         json_agg(DISTINCT jsonb_build_object('id', pa.id, 'amenity', pa.amenity))
@@ -1387,7 +1391,6 @@ async function fetchProjectById(id: string) {
       ) AS amenities
     FROM projects p
     LEFT JOIN configurations c ON c.project_id = p.id
-    LEFT JOIN project_photos ph ON ph.project_id = p.id
     LEFT JOIN project_amenities pa ON pa.project_id = p.id
     WHERE p.id::text = $1
     GROUP BY p.id
@@ -2067,9 +2070,11 @@ app.get("/admin/projects/export", requireAuth, requireRole("super_admin"), async
           )) FILTER (WHERE c.id IS NOT NULL), '[]'
         ) AS configurations,
         COALESCE(
-          json_agg(jsonb_build_object(
-            'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
-          ) ORDER BY ph.display_order) FILTER (WHERE ph.id IS NOT NULL), '[]'
+          (SELECT json_agg(jsonb_build_object(
+             'id', ph.id, 'url', ph.url, 'display_order', ph.display_order
+           ) ORDER BY ph.display_order)
+           FROM project_photos ph WHERE ph.project_id = p.id),
+          '[]'::json
         ) AS photos,
         COALESCE(
           json_agg(DISTINCT jsonb_build_object('id', pa.id, 'amenity', pa.amenity))
@@ -2077,7 +2082,6 @@ app.get("/admin/projects/export", requireAuth, requireRole("super_admin"), async
         ) AS amenities
       FROM projects p
       LEFT JOIN configurations c ON c.project_id = p.id
-      LEFT JOIN project_photos ph ON ph.project_id = p.id
       LEFT JOIN project_amenities pa ON pa.project_id = p.id
       WHERE p.status != 'INACTIVE'
       GROUP BY p.id
