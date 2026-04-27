@@ -914,6 +914,8 @@ app.post("/enquiries", async (req, res) => {
       location,
       enquiry_type,
       source,
+      best_time_to_call,
+      message,
     } = req.body;
 
     if (property_id && !(await ensurePropertyExists(property_id))) {
@@ -935,6 +937,8 @@ app.post("/enquiries", async (req, res) => {
       location: location ?? "",
       enquiry_type: enquiry_type ?? "",
       source: source ?? "Website",
+      best_time_to_call: best_time_to_call ?? "",
+      message: message ?? "",
       status: "New",
       created_at: FieldValue.serverTimestamp(),
       updated_at: FieldValue.serverTimestamp(),
