@@ -3611,6 +3611,43 @@ const TTS_VOICES: Record<string, { name: string; ssmlGender: string }> = {
   "kn-IN": { name: "kn-IN-Wavenet-A",  ssmlGender: "FEMALE" },
 };
 
+// POST /chat/live-token — mint a short-lived ephemeral auth token for the
+// Gemini Live API. The frontend uses this token to open a WebSocket directly
+// to Google's servers — the project's GEMINI_API_KEY never leaves the backend.
+//
+// Token TTL: 30 minutes total, but the WebSocket session must be opened
+// within 1 minute of issuance. Single-use (uses: 1) so a leaked token can
+// only authorize one live session.
+app.post("/chat/live-token", async (_req, res) => {
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      res.status(503).json({ error: "GEMINI_API_KEY is not configured" });
+      return;
+    }
+    // Lazy-import so the cold-start cost is only paid for routes that need it.
+    const { GoogleGenAI } = await import("@google/genai");
+    const ai = new GoogleGenAI({ apiKey, httpOptions: { apiVersion: "v1alpha" } });
+    const now = Date.now();
+    const token = await ai.authTokens.create({
+      config: {
+        uses: 1,
+        expireTime: new Date(now + 30 * 60 * 1000).toISOString(),
+        newSessionExpireTime: new Date(now + 60 * 1000).toISOString(),
+        httpOptions: { apiVersion: "v1alpha" },
+      },
+    });
+    res.json({
+      token: token.name,
+      expireTime: new Date(now + 30 * 60 * 1000).toISOString(),
+      sessionExpireTime: new Date(now + 60 * 1000).toISOString(),
+    });
+  } catch (error: any) {
+    console.error("Error minting Live API token:", error?.message ?? error);
+    res.status(500).json({ error: "Failed to mint Live API token" });
+  }
+});
+
 // POST /chat/tts — convert text to speech using Google Cloud TTS Neural2 (no auth required)
 app.post("/chat/tts", async (req, res) => {
   try {

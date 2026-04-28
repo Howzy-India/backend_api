@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "@google-cloud/cloud-sql-connector": "^1.9.2",
+    "@google/genai": "^1.50.1",
     "@google/generative-ai": "^0.24.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
