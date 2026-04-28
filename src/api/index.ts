@@ -3627,16 +3627,18 @@ app.post("/chat/live-token", async (_req, res) => {
     }
     // Lazy-import so the cold-start cost is only paid for routes that need it.
     const { GoogleGenAI } = await import("@google/genai");
-    // GA Live model (gemini-2.0-flash-live-001) lives on v1beta. Token must be
-    // minted against the same API version it will be used with on the client.
-    const ai = new GoogleGenAI({ apiKey, httpOptions: { apiVersion: "v1beta" } });
+    // The ephemeral auth-tokens API is only available on v1alpha. The token
+    // it returns can still be used to open a Live WebSocket against any model
+    // (the client picks v1beta for gemini-2.0-flash-live-001, v1alpha for
+    // 2.5-flash-preview-native-audio-dialog, etc.).
+    const ai = new GoogleGenAI({ apiKey, httpOptions: { apiVersion: "v1alpha" } });
     const now = Date.now();
     const token = await ai.authTokens.create({
       config: {
         uses: 1,
         expireTime: new Date(now + 30 * 60 * 1000).toISOString(),
         newSessionExpireTime: new Date(now + 60 * 1000).toISOString(),
-        httpOptions: { apiVersion: "v1beta" },
+        httpOptions: { apiVersion: "v1alpha" },
       },
     });
     res.json({
