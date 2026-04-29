@@ -3627,10 +3627,12 @@ app.post("/chat/live-token", async (_req, res) => {
     }
     // Lazy-import so the cold-start cost is only paid for routes that need it.
     const { GoogleGenAI } = await import("@google/genai");
-    // The ephemeral auth-tokens API is only available on v1alpha. The token
-    // it returns can still be used to open a Live WebSocket against any model
-    // (the client picks v1beta for gemini-2.0-flash-live-001, v1alpha for
-    // 2.5-flash-preview-native-audio-dialog, etc.).
+    // Ephemeral auth tokens are an experimental Gemini feature and are ONLY
+    // available on v1alpha — both for token creation here and for the Live
+    // WebSocket connection on the client. The GA Live model
+    // (gemini-2.0-flash-live-001) is reachable from v1alpha when authenticated
+    // with an ephemeral token, so the entire flow stays on v1alpha.
+    // Connecting via v1beta with an ephemeral token returns HTTP 404.
     const ai = new GoogleGenAI({ apiKey, httpOptions: { apiVersion: "v1alpha" } });
     const now = Date.now();
     const token = await ai.authTokens.create({
