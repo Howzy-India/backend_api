@@ -3611,6 +3611,25 @@ const TTS_VOICES: Record<string, { name: string; ssmlGender: string }> = {
   "kn-IN": { name: "kn-IN-Wavenet-A",  ssmlGender: "FEMALE" },
 };
 
+// Default Gemini Live model. Overridable via the LIVE_MODEL env var so that
+// when Google rotates Live model availability (e.g. retiring
+// gemini-2.0-flash-live-001 in April 2026 with no advance notice), we can ship
+// a backend-only fix instead of forcing a frontend rebuild.
+//
+// The chosen default is the floating-tag native-audio alias which Google
+// keeps pointing at the latest supported native-audio preview. As of writing,
+// the only Live-capable models are:
+//   - gemini-2.5-flash-native-audio-latest   (alias, recommended)
+//   - gemini-2.5-flash-native-audio-preview-09-2025
+//   - gemini-2.5-flash-native-audio-preview-12-2025
+//   - gemini-3.1-flash-live-preview
+const DEFAULT_LIVE_MODEL = "gemini-2.5-flash-native-audio-latest";
+// Ephemeral auth tokens are an experimental Gemini feature and are ONLY
+// served on v1alpha — both for token creation and for the client-side Live
+// WebSocket connection. Connecting via v1beta with an ephemeral token returns
+// HTTP 404 and the WebSocket fires `error` before close.
+const LIVE_API_VERSION = "v1alpha";
+
 // POST /chat/live-token — mint a short-lived ephemeral auth token for the
 // Gemini Live API. The frontend uses this token to open a WebSocket directly
 // to Google's servers — the project's GEMINI_API_KEY never leaves the backend.
@@ -3618,6 +3637,10 @@ const TTS_VOICES: Record<string, { name: string; ssmlGender: string }> = {
 // Token TTL: 30 minutes total, but the WebSocket session must be opened
 // within 1 minute of issuance. Single-use (uses: 1) so a leaked token can
 // only authorize one live session.
+//
+// Response also carries `model` + `apiVersion` so the frontend uses
+// server-controlled values instead of hardcoding model names. This means
+// rotating to a newer Live model only requires redeploying the backend.
 app.post("/chat/live-token", async (_req, res) => {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -3627,26 +3650,25 @@ app.post("/chat/live-token", async (_req, res) => {
     }
     // Lazy-import so the cold-start cost is only paid for routes that need it.
     const { GoogleGenAI } = await import("@google/genai");
-    // Ephemeral auth tokens are an experimental Gemini feature and are ONLY
-    // available on v1alpha — both for token creation here and for the Live
-    // WebSocket connection on the client. The GA Live model
-    // (gemini-2.0-flash-live-001) is reachable from v1alpha when authenticated
-    // with an ephemeral token, so the entire flow stays on v1alpha.
-    // Connecting via v1beta with an ephemeral token returns HTTP 404.
-    const ai = new GoogleGenAI({ apiKey, httpOptions: { apiVersion: "v1alpha" } });
+    const ai = new GoogleGenAI({ apiKey, httpOptions: { apiVersion: LIVE_API_VERSION } });
     const now = Date.now();
+    const expireTime = new Date(now + 30 * 60 * 1000).toISOString();
+    const sessionExpireTime = new Date(now + 60 * 1000).toISOString();
     const token = await ai.authTokens.create({
       config: {
         uses: 1,
-        expireTime: new Date(now + 30 * 60 * 1000).toISOString(),
-        newSessionExpireTime: new Date(now + 60 * 1000).toISOString(),
-        httpOptions: { apiVersion: "v1alpha" },
+        expireTime,
+        newSessionExpireTime: sessionExpireTime,
+        httpOptions: { apiVersion: LIVE_API_VERSION },
       },
     });
+    const model = process.env.LIVE_MODEL?.trim() || DEFAULT_LIVE_MODEL;
     res.json({
       token: token.name,
-      expireTime: new Date(now + 30 * 60 * 1000).toISOString(),
-      sessionExpireTime: new Date(now + 60 * 1000).toISOString(),
+      expireTime,
+      sessionExpireTime,
+      model,
+      apiVersion: LIVE_API_VERSION,
     });
   } catch (error: any) {
     console.error("Error minting Live API token:", error?.message ?? error);
